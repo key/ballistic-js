@@ -82,4 +82,89 @@ describe('BallisticsCalculator', () => {
       expect(result.flightTime).toBeCloseTo(43.248, 2);
     });
   });
+
+  describe('trajectory data structure', () => {
+    it('should include velocity components in trajectory points', () => {
+      const params = {
+        velocity: 100,
+        angle: 45,
+        initialHeight: 0,
+        mass: 0.01,
+        dragCoeff: 0.47,
+        area: 0.0001,
+        airDensity: 1.225
+      };
+
+      const result = calculator.calculateTrajectory(params);
+      const firstPoint = result.trajectory[0];
+
+      expect(firstPoint).toHaveProperty('x');
+      expect(firstPoint).toHaveProperty('y');
+      expect(firstPoint).toHaveProperty('t');
+      expect(firstPoint).toHaveProperty('vx');
+      expect(firstPoint).toHaveProperty('vy');
+      expect(firstPoint.x).toBe(0);
+      expect(firstPoint.y).toBe(0);
+      expect(firstPoint.t).toBe(0);
+    });
+
+    it('should calculate decreasing velocity due to drag', () => {
+      const params = {
+        velocity: 300,
+        angle: 30,
+        initialHeight: 0,
+        mass: 0.032,
+        dragCoeff: 0.47,
+        area: 0.000235,
+        airDensity: 1.225
+      };
+
+      const result = calculator.calculateTrajectory(params);
+      const trajectory = result.trajectory;
+      
+      // Check that velocity decreases over time
+      const initialVelocity = Math.sqrt(trajectory[0].vx ** 2 + trajectory[0].vy ** 2);
+      const midVelocity = Math.sqrt(trajectory[Math.floor(trajectory.length/2)].vx ** 2 + 
+                                    trajectory[Math.floor(trajectory.length/2)].vy ** 2);
+      
+      expect(midVelocity).toBeLessThan(initialVelocity);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle very high drag coefficient', () => {
+      const params = {
+        velocity: 100,
+        angle: 45,
+        initialHeight: 0,
+        mass: 0.01,
+        dragCoeff: 2.0, // Very high drag
+        area: 0.001,
+        airDensity: 1.225
+      };
+
+      const result = calculator.calculateTrajectory(params);
+      
+      expect(result.trajectory).toBeDefined();
+      expect(result.maxRange).toBeLessThan(100); // Should have short range due to high drag
+    });
+
+    it('should handle 90 degree angle', () => {
+      const params = {
+        velocity: 100,
+        angle: 90,
+        initialHeight: 0,
+        mass: 0.01,
+        dragCoeff: 0.47,
+        area: 0.0001,
+        airDensity: 1.225
+      };
+
+      const result = calculator.calculateTrajectory(params);
+      
+      expect(result.trajectory).toBeDefined();
+      expect(result.maxRange).toBeCloseTo(0, 1); // Should fall straight down
+      expect(result.trajectory[0].vx).toBeCloseTo(0, 5); // Horizontal velocity should be ~0
+    });
+  });
 });
