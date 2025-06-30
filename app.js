@@ -7,6 +7,24 @@ let chartScales = null;
 document.getElementById('calculate').addEventListener('click', calculate);
 document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
 
+// Tab functionality
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabPanels = document.querySelectorAll('.tab-panel');
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const targetTab = button.getAttribute('data-tab');
+        
+        // Remove active class from all buttons and panels
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabPanels.forEach(panel => panel.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding panel
+        button.classList.add('active');
+        document.getElementById(targetTab).classList.add('active');
+    });
+});
+
 function getInputValues() {
     return {
         velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
@@ -42,18 +60,36 @@ function displayResults(withDrag, noDrag, energy, momentum) {
     const resultsDiv = document.getElementById('results');
     
     resultsDiv.innerHTML = `
-        <div class="result-item">
-            <h3>空気抵抗あり</h3>
-            <p><strong>最大高度:</strong> ${withDrag.maxHeight.toFixed(2)} m</p>
-            <p><strong>最大射程:</strong> ${withDrag.maxRange.toFixed(2)} m</p>
-            <p><strong>飛行時間:</strong> ${withDrag.flightTime.toFixed(2)} s</p>
-            <p><strong>着弾速度:</strong> ${withDrag.impactVelocity.toFixed(2)} m/s</p>
-        </div>
-        
-        <div class="result-item">
-            <h3>初期条件</h3>
-            <p><strong>運動エネルギー:</strong> ${energy.toFixed(2)} J</p>
-            <p><strong>運動量:</strong> ${momentum.toFixed(4)} kg·m/s</p>
+        <div class="results-grid">
+            <div class="result-card">
+                <div class="result-value">${withDrag.maxRange.toFixed(0)}</div>
+                <div class="result-label">最大射程 (m)</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-value">${withDrag.maxHeight.toFixed(1)}</div>
+                <div class="result-label">最大高度 (m)</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-value">${withDrag.flightTime.toFixed(1)}</div>
+                <div class="result-label">飛行時間 (s)</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-value">${(withDrag.impactVelocity / 0.3048).toFixed(0)}</div>
+                <div class="result-label">着弾速度 (fps)</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-value">${energy.toFixed(0)}</div>
+                <div class="result-label">初期エネルギー (J)</div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-value">${((withDrag.maxRange / noDrag.maxRange) * 100).toFixed(0)}%</div>
+                <div class="result-label">射程効率</div>
+            </div>
         </div>
     `;
 }
