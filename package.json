@@ -1,0 +1,24 @@
+{
+  "name": "ballistic-js",
+  "version": "1.0.0",
+  "description": "日本語対応の弾道計算アプリケーション",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "ballistics",
+    "trajectory",
+    "calculator"
+  ],
+  "author": "ballistic-js contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "babel-jest": "^29.7.0"
+  }
+}
