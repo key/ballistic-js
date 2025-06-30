@@ -50,10 +50,19 @@ button {
     cursor: pointer;
     font-size: 16px;
     margin-top: 20px;
+    margin-right: 10px;
 }
 
 button:hover {
     background-color: #45a049;
+}
+
+#downloadCSV {
+    background-color: #2196F3;
+}
+
+#downloadCSV:hover {
+    background-color: #0b7dda;
 }
 
 #results {

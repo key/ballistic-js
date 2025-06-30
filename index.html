@@ -48,6 +48,7 @@
             </div>
             
             <button id="calculate">軌道を計算</button>
+            <button id="downloadCSV" style="display: none;">CSVダウンロード</button>
         </div>
         
         <div class="results-section">
@@ -57,7 +58,10 @@
         
         <div class="chart-section">
             <h2>軌道の可視化</h2>
-            <canvas id="trajectoryChart"></canvas>
+            <div style="position: relative;">
+                <canvas id="trajectoryChart"></canvas>
+                <div id="tooltip" style="position: absolute; display: none; background: rgba(0, 0, 0, 0.8); color: white; padding: 8px; border-radius: 4px; font-size: 12px; pointer-events: none;"></div>
+            </div>
         </div>
     </div>
     
