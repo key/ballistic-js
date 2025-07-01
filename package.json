@@ -8,7 +8,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint:md": "markdownlint-cli2 '**/*.md' '!node_modules/**/*.md'",
-    "lint:md:fix": "markdownlint-cli2 '**/*.md' '!node_modules/**/*.md' --fix"
+    "lint:md:fix": "markdownlint-cli2 '**/*.md' '!node_modules/**/*.md' --fix",
+    "lint:yaml": "yamllint -c .yamllint .",
+    "lint": "npm run lint:md && npm run lint:yaml"
   },
   "keywords": [
     "ballistics",
