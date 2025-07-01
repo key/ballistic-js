@@ -1,0 +1,33 @@
+# CODEOWNERS for ballistic-js
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, @key will be requested for
+# review when someone opens a pull request.
+* @key
+
+# GitHub Actions workflows
+/.github/workflows/ @key
+
+# Documentation
+*.md @key
+/docs/ @key
+
+# Core application files
+/app.js @key
+/ballistics.js @key
+/index.html @key
+/styles.css @key
+
+# Configuration files
+/.github/ @key
+/package.json @key
+/package-lock.json @key
+/.markdownlint.json @key
+/.yamllint @key
+
+# Test files
+/tests/ @key
+*.test.js @key
+/jest.config.js @key
+/.babelrc @key
