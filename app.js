@@ -256,7 +256,8 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             const velocityFps = velocity / 0.3048; // Convert m/s to fps
             const energy = calculator.calculateEnergy(mass, velocity);
             
-            const px = margin + closestPoint.x * scaleX;
+            // Use exact distance for x position to align with grid lines
+            const px = margin + distance * scaleX;
             const py = canvas.height - margin - closestPoint.y * scaleY;
             
             // Draw vertical line at this distance
