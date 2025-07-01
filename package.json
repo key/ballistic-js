@@ -24,6 +24,6 @@
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
     "babel-jest": "^30.0.2",
-    "markdownlint-cli2": "^0.14.0"
+    "markdownlint-cli2": "^0.18.1"
   }
 }
