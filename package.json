@@ -6,7 +6,9 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "lint:md": "markdownlint-cli2 '**/*.md' '!node_modules/**/*.md'",
+    "lint:md:fix": "markdownlint-cli2 '**/*.md' '!node_modules/**/*.md' --fix"
   },
   "keywords": [
     "ballistics",
@@ -19,6 +21,7 @@
     "jest": "^30.0.3",
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
-    "babel-jest": "^30.0.2"
+    "babel-jest": "^30.0.2",
+    "markdownlint-cli2": "^0.14.0"
   }
 }
