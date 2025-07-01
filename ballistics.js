@@ -12,12 +12,20 @@ class BallisticsCalculator {
             mass,
             dragCoeff,
             area,
-            airDensity
+            airDensity,
+            windSpeed = 0,
+            windAngle = 0
         } = params;
 
         const angleRad = angle * Math.PI / 180;
         const vx0 = velocity * Math.cos(angleRad);
         const vy0 = velocity * Math.sin(angleRad);
+        
+        // Convert wind angle to radians (0° = North, 90° = East, etc.)
+        // For ballistics, we need: 0° = headwind, 90° = right crosswind
+        const windAngleRad = (windAngle - 90) * Math.PI / 180;
+        const windVx = windSpeed * Math.cos(windAngleRad);
+        const windVy = 0; // Assume horizontal wind only
 
         const trajectory = [];
         let x = 0, y = initialHeight;
@@ -29,10 +37,14 @@ class BallisticsCalculator {
         while (y >= 0 || t === 0) {
             trajectory.push({ x, y, t, vx, vy });
 
-            const v = Math.sqrt(vx * vx + vy * vy);
-            const dragForce = 0.5 * dragCoeff * airDensity * area * v * v;
-            const dragAx = -(dragForce / mass) * (vx / v);
-            const dragAy = -(dragForce / mass) * (vy / v);
+            // Relative velocity considering wind
+            const vRelX = vx - windVx;
+            const vRelY = vy - windVy;
+            const vRel = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
+            
+            const dragForce = 0.5 * dragCoeff * airDensity * area * vRel * vRel;
+            const dragAx = -(dragForce / mass) * (vRelX / vRel);
+            const dragAy = -(dragForce / mass) * (vRelY / vRel);
 
             vx += dragAx * this.timeStep;
             vy += (dragAy - this.g) * this.timeStep;

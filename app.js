@@ -7,6 +7,15 @@ let chartScales = null;
 document.getElementById('calculate').addEventListener('click', calculate);
 document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
 
+// Add event listeners for environment inputs
+const envInputs = ['temperature', 'pressure', 'humidity', 'altitude'];
+envInputs.forEach(id => {
+    document.getElementById(id).addEventListener('input', updateCalculatedValues);
+});
+
+// Initial calculation of air density
+updateCalculatedValues();
+
 // Tab functionality
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabPanels = document.querySelectorAll('.tab-panel');
@@ -26,6 +35,8 @@ tabButtons.forEach(button => {
 });
 
 function getInputValues() {
+    const airDensity = calculateAirDensity();
+    
     return {
         velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
         angle: parseFloat(document.getElementById('angle').value),
@@ -33,7 +44,9 @@ function getInputValues() {
         mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
         area: parseFloat(document.getElementById('area').value) / 1000000, // Convert mm² to m²
-        airDensity: parseFloat(document.getElementById('airDensity').value)
+        airDensity: airDensity,
+        windSpeed: parseFloat(document.getElementById('windSpeed').value),
+        windAngle: parseFloat(document.getElementById('windAngle').value)
     };
 }
 
@@ -378,5 +391,57 @@ canvas.addEventListener('mousemove', function(e) {
 canvas.addEventListener('mouseleave', function() {
     tooltip.style.display = 'none';
 });
+
+function calculateAirDensity() {
+    const temperature = parseFloat(document.getElementById('temperature').value);
+    const pressure = parseFloat(document.getElementById('pressure').value);
+    const humidity = parseFloat(document.getElementById('humidity').value);
+    const altitude = parseFloat(document.getElementById('altitude').value);
+    
+    // 標高による気圧補正
+    const seaLevelPressure = pressure * Math.pow(1 - 0.0065 * altitude / 288.15, -5.255);
+    
+    // 飽和水蒸気圧の計算 (Magnus formula)
+    const Es = 6.1078 * Math.pow(10, (7.5 * temperature) / (temperature + 237.3));
+    
+    // 実際の水蒸気圧
+    const E = (humidity / 100) * Es;
+    
+    // 乾燥空気の分圧
+    const Pd = (seaLevelPressure - E) * 100; // hPa to Pa
+    
+    // 水蒸気の分圧
+    const Pv = E * 100; // hPa to Pa
+    
+    // 絶対温度
+    const T = temperature + 273.15;
+    
+    // 空気密度の計算
+    // ρ = (Pd * Md + Pv * Mv) / (R * T)
+    // Md = 28.9644 g/mol (乾燥空気のモル質量)
+    // Mv = 18.01528 g/mol (水蒸気のモル質量)
+    // R = 8.314462618 J/(mol·K) (気体定数)
+    const R = 8.314462618;
+    const Md = 0.0289644; // kg/mol
+    const Mv = 0.01801528; // kg/mol
+    
+    const airDensity = (Pd * Md + Pv * Mv) / (R * T);
+    
+    return airDensity;
+}
+
+function calculateSoundSpeed(temperature) {
+    // 音速 = 331.5 + 0.6 * temperature (m/s)
+    return 331.5 + 0.6 * temperature;
+}
+
+function updateCalculatedValues() {
+    const airDensity = calculateAirDensity();
+    const temperature = parseFloat(document.getElementById('temperature').value);
+    const soundSpeed = calculateSoundSpeed(temperature);
+    
+    document.getElementById('calculatedAirDensity').textContent = airDensity.toFixed(4);
+    document.getElementById('soundSpeed').textContent = soundSpeed.toFixed(1);
+}
 
 calculate();
