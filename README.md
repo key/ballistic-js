@@ -37,128 +37,136 @@
 
 #### 初速度成分
 
-```text
-vx₀ = v₀ × cos(θ)
-vy₀ = v₀ × sin(θ)
-```
+$$
+\begin{align}
+v_{x0} &= v_0 \cos(\theta) \\
+v_{y0} &= v_0 \sin(\theta)
+\end{align}
+$$
 
-- `v₀`: 初速度 (m/s)
-- `θ`: 発射角度 (rad)
+- $v_0$: 初速度 (m/s)
+- $\theta$: 発射角度 (rad)
 
 #### 抗力（ドラッグ）
 
-```text
-F_drag = ½ × Cd × ρ × A × v²
-```
+$$
+F_{drag} = \frac{1}{2} C_d \rho A v^2
+$$
 
-- `Cd`: 抗力係数
-- `ρ`: 空気密度 (kg/m³)
-- `A`: 断面積 (m²)
-- `v`: 相対速度 (m/s)
+- $C_d$: 抗力係数
+- $\rho$: 空気密度 (kg/m³)
+- $A$: 断面積 (m²)
+- $v$: 相対速度 (m/s)
 
 #### 風を考慮した相対速度
 
-```text
-v_rel_x = vx - v_wind_x
-v_rel_y = vy - v_wind_y
-v_rel = √(v_rel_x² + v_rel_y²)
-```
+$$
+\begin{align}
+v_{rel,x} &= v_x - v_{wind,x} \\
+v_{rel,y} &= v_y - v_{wind,y} \\
+v_{rel} &= \sqrt{v_{rel,x}^2 + v_{rel,y}^2}
+\end{align}
+$$
 
 #### 加速度成分
 
-```text
-ax = -(F_drag / m) × (v_rel_x / v_rel)
-ay = -(F_drag / m) × (v_rel_y / v_rel) - g
-```
+$$
+\begin{align}
+a_x &= -\frac{F_{drag}}{m} \cdot \frac{v_{rel,x}}{v_{rel}} \\
+a_y &= -\frac{F_{drag}}{m} \cdot \frac{v_{rel,y}}{v_{rel}} - g
+\end{align}
+$$
 
-- `m`: 弾体質量 (kg)
-- `g`: 重力加速度 (9.81 m/s²)
+- $m$: 弾体質量 (kg)
+- $g$: 重力加速度 (9.81 m/s²)
 
 #### 数値積分（オイラー法）
 
-```text
-vx(t+Δt) = vx(t) + ax × Δt
-vy(t+Δt) = vy(t) + ay × Δt
-x(t+Δt) = x(t) + vx × Δt
-y(t+Δt) = y(t) + vy × Δt
-```
+$$
+\begin{align}
+v_x(t+\Delta t) &= v_x(t) + a_x \Delta t \\
+v_y(t+\Delta t) &= v_y(t) + a_y \Delta t \\
+x(t+\Delta t) &= x(t) + v_x \Delta t \\
+y(t+\Delta t) &= y(t) + v_y \Delta t
+\end{align}
+$$
 
-- `Δt`: 時間ステップ (0.01秒)
+- $\Delta t$: 時間ステップ (0.01秒)
 
 ### 2. 空気密度の計算
 
 #### 標高による気圧補正（気圧高度公式）
 
-```text
-P_sea_level = P × (1 - 0.0065 × h / 288.15)^(-5.255)
-```
+$$
+P_{sea\_level} = P \left(1 - \frac{0.0065 h}{288.15}\right)^{-5.255}
+$$
 
-- `P`: 観測地点の気圧 (hPa)
-- `h`: 標高 (m)
+- $P$: 観測地点の気圧 (hPa)
+- $h$: 標高 (m)
 
 #### 飽和水蒸気圧（マグヌス式）
 
-```text
-Es = 6.1078 × 10^(7.5 × T / (T + 237.3))
-```
+$$
+E_s = 6.1078 \times 10^{\frac{7.5T}{T + 237.3}}
+$$
 
-- `T`: 気温 (℃)
-- `Es`: 飽和水蒸気圧 (hPa)
+- $T$: 気温 (℃)
+- $E_s$: 飽和水蒸気圧 (hPa)
 
 #### 実際の水蒸気圧
 
-```text
-E = (RH / 100) × Es
-```
+$$
+E = \frac{RH}{100} \times E_s
+$$
 
-- `RH`: 相対湿度 (%)
+- $RH$: 相対湿度 (%)
 
 #### 空気密度（理想気体の状態方程式）
 
-```text
-ρ = (Pd × Md + Pv × Mv) / (R × T_abs)
-```
+$$
+\rho = \frac{P_d M_d + P_v M_v}{R T_{abs}}
+$$
 
-- `Pd`: 乾燥空気の分圧 (Pa) = `(P_sea_level - E) × 100`
-- `Pv`: 水蒸気の分圧 (Pa) = `E × 100`
-- `Md`: 乾燥空気のモル質量 (0.0289644 kg/mol)
-- `Mv`: 水蒸気のモル質量 (0.01801528 kg/mol)
-- `R`: 気体定数 (8.314462618 J/(mol·K))
-- `T_abs`: 絶対温度 (K) = `T + 273.15`
+- $P_d$: 乾燥空気の分圧 (Pa) = $(P_{sea\_level} - E) \times 100$
+- $P_v$: 水蒸気の分圧 (Pa) = $E \times 100$
+- $M_d$: 乾燥空気のモル質量 (0.0289644 kg/mol)
+- $M_v$: 水蒸気のモル質量 (0.01801528 kg/mol)
+- $R$: 気体定数 (8.314462618 J/(mol·K))
+- $T_{abs}$: 絶対温度 (K) = $T + 273.15$
 
 ### 3. エネルギーと運動量
 
 #### 運動エネルギー
 
-```text
-E = ½ × m × v²
-```
+$$
+E = \frac{1}{2} m v^2
+$$
 
 #### 運動量
 
-```text
-p = m × v
-```
+$$
+p = m v
+$$
 
 ### 4. 空気抵抗なしの弾道計算（比較用）
 
 #### 最大高度
 
-```text
-h_max = (vy₀²) / (2 × g)
-```
+$$
+h_{max} = \frac{v_{y0}^2}{2g}
+$$
 
 #### 飛行時間
 
-```text
-t_flight = 2 × vy₀ / g
-```
+$$
+t_{flight} = \frac{2 v_{y0}}{g}
+$$
 
 #### 最大射程
 
-```text
-R_max = vx₀ × t_flight
-```
+$$
+R_{max} = v_{x0} \times t_{flight}
+$$
 
 ## 参考文献
 
