@@ -271,17 +271,18 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             
             // Draw data box
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(px - 40, py - 40, 80, 35);
+            ctx.fillRect(px - 40, py - 50, 80, 48);
             
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 1;
-            ctx.strokeRect(px - 40, py - 40, 80, 35);
+            ctx.strokeRect(px - 40, py - 50, 80, 48);
             
             ctx.fillStyle = '#333';
             ctx.textAlign = 'center';
-            ctx.fillText(`${distance}m`, px, py - 28);
-            ctx.fillText(`${velocityFps.toFixed(0)} fps`, px, py - 15);
-            ctx.fillText(`${energy.toFixed(0)} J`, px, py - 2);
+            ctx.fillText(`${distance}m`, px, py - 38);
+            ctx.fillText(`${closestPoint.y.toFixed(1)}m`, px, py - 25);
+            ctx.fillText(`${velocityFps.toFixed(0)} fps`, px, py - 12);
+            ctx.fillText(`${energy.toFixed(0)} J`, px, py + 1);
         }
     });
 }
