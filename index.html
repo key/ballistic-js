@@ -28,7 +28,7 @@
                     
                     <div class="input-group">
                         <label for="dragCoeff">抗力係数:</label>
-                        <input type="number" id="dragCoeff" value="0.47" step="0.01">
+                        <input type="number" id="dragCoeff" value="0.0865" step="0.0001">
                     </div>
                     
                     <div class="input-group">
@@ -56,8 +56,40 @@
                 
                 <div id="environment" class="tab-panel">
                     <div class="input-group">
-                        <label for="airDensity">空気密度 (kg/m³):</label>
-                        <input type="number" id="airDensity" value="1.225" step="0.001">
+                        <label for="temperature">気温 (℃):</label>
+                        <input type="number" id="temperature" value="20" step="1">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="pressure">気圧 (hPa):</label>
+                        <input type="number" id="pressure" value="1013" step="0.1">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="humidity">湿度 (%):</label>
+                        <input type="number" id="humidity" value="40" step="1" min="0" max="100">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="altitude">標高 (m):</label>
+                        <input type="number" id="altitude" value="0" step="10">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="windSpeed">風速 (m/s):</label>
+                        <input type="number" id="windSpeed" value="0" step="0.1">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="windAngle">風向 (度):</label>
+                        <input type="number" id="windAngle" value="0" step="1" min="0" max="360">
+                        <small style="display: block; color: #666; margin-top: 5px;">0°=北, 90°=東, 180°=南, 270°=西</small>
+                    </div>
+                    
+                    <div class="calculated-values">
+                        <h4>計算値</h4>
+                        <p>空気密度: <span id="calculatedAirDensity">1.225</span> kg/m³</p>
+                        <p>音速: <span id="soundSpeed">340.3</span> m/s</p>
                     </div>
                 </div>
             </div>

@@ -66,6 +66,35 @@ h1 {
     display: block;
 }
 
+.calculated-values {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e8f5e9;
+    border-radius: 6px;
+    border: 1px solid #c8e6c9;
+}
+
+.calculated-values h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2e7d32;
+}
+
+.calculated-values p {
+    margin: 5px 0;
+    color: #1b5e20;
+}
+
+.calculated-values span {
+    font-weight: bold;
+    color: #1b5e20;
+}
+
+small {
+    font-size: 12px;
+    color: #666;
+}
+
 .input-group {
     margin: 15px 0;
 }
