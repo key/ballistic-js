@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ballistic-JS is a Japanese-language web application for ballistic trajectory calculations. It's a client-side application using vanilla JavaScript with HTML5 Canvas for visualization.
+Ballistic-JS is a Japanese-language web application for ballistic trajectory calculations. It's a client-side
+application using vanilla JavaScript with HTML5 Canvas for visualization.
 
 ## Essential Commands
 
@@ -49,7 +50,8 @@ npx jest -t "calculateTrajectory"
 
 ### Core Files
 
-- **ballistics.js**: Browser version of physics calculations - contains all trajectory math, air resistance formulas, and environmental adjustments
+- **ballistics.js**: Browser version of physics calculations - contains all trajectory math, air resistance
+  formulas, and environmental adjustments
 - **ballistics.node.js**: Node.js-compatible version for testing (CommonJS exports)
 - **app.js**: UI logic, Canvas rendering, user interactions, and CSV export functionality
 - **index.html**: Single-page application entry point with all UI elements
@@ -72,7 +74,8 @@ npx jest -t "calculateTrajectory"
    - Wind effects on both horizontal and vertical components
    - Drag coefficient adjustments
 
-4. **UI State Management**: All UI state is managed through vanilla JavaScript DOM manipulation in app.js, with event listeners for input changes triggering recalculation and re-rendering.
+4. **UI State Management**: All UI state is managed through vanilla JavaScript DOM manipulation in app.js,
+   with event listeners for input changes triggering recalculation and re-rendering.
 
 ## Testing Philosophy
 
@@ -84,8 +87,11 @@ Tests are located in `ballistics.test.js` and focus on the physics calculations.
 
 ## Deployment
 
-The application is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment workflow is configured in `.github/workflows/deploy.yml`.
+The application is automatically deployed to GitHub Pages when changes are pushed to the main branch.
+The deployment workflow is configured in `.github/workflows/deploy.yml`.
 
 ## Japanese Localization
 
-All user-facing text is in Japanese. When modifying UI elements or adding features, ensure proper Japanese language is used. The README.md contains mathematical formulas in LaTeX format that explain the physics calculations.
+All user-facing text is in Japanese. When modifying UI elements or adding features, ensure proper Japanese
+language is used. The README.md contains mathematical formulas in LaTeX format that explain the physics
+calculations.
