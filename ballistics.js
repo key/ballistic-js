@@ -11,11 +11,14 @@ class BallisticsCalculator {
             initialHeight = 0,
             mass,
             dragCoeff,
-            area,
+            diameter,
             airDensity,
             windSpeed = 0,
             windAngle = 0
         } = params;
+        
+        // Calculate area from diameter (diameter in m, area in m²)
+        const area = Math.PI * Math.pow(diameter / 2, 2);
 
         const angleRad = angle * Math.PI / 180;
         const vx0 = velocity * Math.cos(angleRad);

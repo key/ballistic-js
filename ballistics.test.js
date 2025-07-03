@@ -15,7 +15,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 1.6,
         mass: 0.032, // 32g in kg
         dragCoeff: 0.47,
-        area: 0.000235, // 235mm² in m²
+        diameter: 0.0173, // 17.3mm in m
         airDensity: 1.225
       };
 
@@ -37,7 +37,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 2,
         mass: 0.01,
         dragCoeff: 0.47,
-        area: 0.0001,
+        diameter: 0.0113, // 11.3mm in m
         airDensity: 1.225
       };
 
@@ -91,7 +91,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 0,
         mass: 0.01,
         dragCoeff: 0.47,
-        area: 0.0001,
+        diameter: 0.0113, // 11.3mm in m
         airDensity: 1.225
       };
 
@@ -115,7 +115,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 0,
         mass: 0.032,
         dragCoeff: 0.47,
-        area: 0.000235,
+        diameter: 0.0173, // 17.3mm in m
         airDensity: 1.225
       };
 
@@ -139,7 +139,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 0,
         mass: 0.01,
         dragCoeff: 2.0, // Very high drag
-        area: 0.001,
+        diameter: 0.0357, // 35.7mm in m
         airDensity: 1.225
       };
 
@@ -156,7 +156,7 @@ describe('BallisticsCalculator', () => {
         initialHeight: 0,
         mass: 0.01,
         dragCoeff: 0.47,
-        area: 0.0001,
+        diameter: 0.0113, // 11.3mm in m
         airDensity: 1.225
       };
 

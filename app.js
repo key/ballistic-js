@@ -43,7 +43,7 @@ function getInputValues() {
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
         mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
-        area: parseFloat(document.getElementById('area').value) / 1000000, // Convert mm² to m²
+        diameter: parseFloat(document.getElementById('diameter').value) / 1000, // Convert mm to m
         airDensity: airDensity,
         windSpeed: parseFloat(document.getElementById('windSpeed').value),
         windAngle: parseFloat(document.getElementById('windAngle').value)
