@@ -13,6 +13,9 @@ envInputs.forEach(id => {
     document.getElementById(id).addEventListener('input', updateCalculatedValues);
 });
 
+// Add event listener for zero-in distance
+document.getElementById('zeroDistance').addEventListener('change', calculateZeroAngle);
+
 // Initial calculation of air density
 updateCalculatedValues();
 
@@ -41,6 +44,7 @@ function getInputValues() {
         velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
         angle: parseFloat(document.getElementById('angle').value),
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
+        scopeHeight: parseFloat(document.getElementById('scopeHeight').value) / 1000, // Convert mm to m
         mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
         diameter: parseFloat(document.getElementById('diameter').value) / 1000, // Convert mm to m
@@ -203,6 +207,48 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     });
     ctx.stroke();
     
+    // Draw scope height line
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const totalScopeHeight = initialHeight + scopeHeight;
+    
+    ctx.strokeStyle = '#4444ff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([10, 5]); // Dashed line
+    ctx.beginPath();
+    const scopeY = canvas.height - margin - totalScopeHeight * scaleY;
+    ctx.moveTo(margin, scopeY);
+    ctx.lineTo(canvas.width - margin, scopeY);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset to solid line
+    
+    // Add label for scope height
+    ctx.fillStyle = '#4444ff';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`スコープ高さ: ${totalScopeHeight.toFixed(3)}m`, margin + 5, scopeY - 5);
+    
+    // Draw zero-in distance marker if selected
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (zeroDistance) {
+        const zeroX = margin + zeroDistance * scaleX;
+        if (zeroX <= canvas.width - margin) {
+            ctx.strokeStyle = '#44ff44';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(zeroX, margin);
+            ctx.lineTo(zeroX, canvas.height - margin);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Add label
+            ctx.fillStyle = '#44ff44';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`ゼロイン: ${zeroDistance}m`, zeroX, margin - 5);
+        }
+    }
     
     ctx.fillStyle = '#333';
     ctx.font = '12px Arial';
@@ -293,6 +339,83 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             ctx.fillText(`${energy.toFixed(0)} J`, px, py - 4);
         }
     });
+}
+
+function calculateZeroAngle() {
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (!zeroDistance) {
+        return; // No zero distance selected
+    }
+    
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    
+    // Get current parameters
+    const params = getInputValues();
+    
+    // Use binary search to find the angle that gives us the zero distance
+    let lowAngle = -10;
+    let highAngle = 10;
+    let bestAngle = 0;
+    let iterations = 0;
+    const maxIterations = 50;
+    const tolerance = 0.1; // 0.1m tolerance
+    
+    while (iterations < maxIterations && (highAngle - lowAngle) > 0.001) {
+        const midAngle = (lowAngle + highAngle) / 2;
+        
+        // Calculate trajectory with this angle
+        const testParams = {...params, angle: midAngle};
+        const trajectory = calculator.calculateTrajectory(
+            testParams.velocity,
+            testParams.angle,
+            testParams.initialHeight,
+            testParams.mass,
+            testParams.dragCoeff,
+            testParams.diameter,
+            testParams.airDensity,
+            testParams.windSpeed,
+            testParams.windAngle
+        );
+        
+        // Find where trajectory crosses scope height line at the zero distance
+        let crossingHeight = null;
+        for (let i = 1; i < trajectory.length; i++) {
+            if (trajectory[i].x >= zeroDistance) {
+                // Interpolate to find exact height at zero distance
+                const ratio = (zeroDistance - trajectory[i-1].x) / (trajectory[i].x - trajectory[i-1].x);
+                crossingHeight = trajectory[i-1].y + ratio * (trajectory[i].y - trajectory[i-1].y);
+                break;
+            }
+        }
+        
+        if (crossingHeight === null) {
+            // Trajectory doesn't reach zero distance
+            lowAngle = midAngle;
+        } else {
+            const heightDiff = crossingHeight - (initialHeight + scopeHeight);
+            
+            if (Math.abs(heightDiff) < tolerance / 100) {
+                bestAngle = midAngle;
+                break;
+            } else if (heightDiff > 0) {
+                // Shooting too high, reduce angle
+                highAngle = midAngle;
+            } else {
+                // Shooting too low, increase angle
+                lowAngle = midAngle;
+            }
+            bestAngle = midAngle;
+        }
+        
+        iterations++;
+    }
+    
+    // Set the calculated angle
+    document.getElementById('angle').value = bestAngle.toFixed(3);
+    
+    // Trigger recalculation
+    calculate();
 }
 
 function downloadCSV() {
