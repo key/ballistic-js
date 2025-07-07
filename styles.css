@@ -280,3 +280,18 @@ input:checked + .unit-slider:before {
 .input-group > select {
     flex: 0 0 150px;
 }
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.section-header .unit-toggle {
+    margin-left: 0;
+}
