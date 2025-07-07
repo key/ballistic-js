@@ -95,22 +95,10 @@ small {
     color: #666;
 }
 
-.input-group {
-    margin: 15px 0;
-}
-
 label {
     display: inline-block;
     width: 200px;
     font-weight: bold;
-}
-
-input[type="number"],
-select {
-    width: 150px;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
 }
 
 button {
@@ -217,4 +205,78 @@ button:hover {
 
 .github-icon {
     fill: currentColor;
+}
+
+/* Unit toggle switches */
+.unit-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 15px;
+    font-size: 14px;
+}
+
+.unit-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    margin: 0 8px;
+}
+
+.unit-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.unit-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.unit-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .unit-slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .unit-slider:before {
+    transform: translateX(26px);
+}
+
+.unit-label {
+    color: #666;
+    font-weight: normal;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.input-group label {
+    flex: 0 0 200px;
+}
+
+.input-group input[type="number"],
+.input-group select {
+    flex: 0 0 150px;
 }

@@ -4,6 +4,11 @@ let currentTrajectoryData = null;
 let currentMass = null;
 let chartScales = null;
 
+// Unit conversion states
+let useGrains = false;  // Mass: false = grams, true = grains
+let useMetersPerSec = false;  // Velocity: false = fps, true = m/s
+let useFootPounds = false;  // Energy: false = joules, true = ft-lbs
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('calculate').addEventListener('click', calculate);
@@ -38,17 +43,79 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(targetTab).classList.add('active');
         });
     });
+
+    // Unit toggle event listeners
+    document.getElementById('massUnitToggle').addEventListener('change', function(e) {
+        useGrains = e.target.checked;
+        const massInput = document.getElementById('mass');
+        const massUnit = document.getElementById('massUnit');
+        
+        if (useGrains) {
+            // Convert grams to grains (1 gram = 15.4324 grains)
+            massInput.value = (parseFloat(massInput.value) * 15.4324).toFixed(1);
+            massInput.step = "1";
+            massUnit.textContent = "gr";
+        } else {
+            // Convert grains to grams
+            massInput.value = (parseFloat(massInput.value) / 15.4324).toFixed(1);
+            massInput.step = "0.1";
+            massUnit.textContent = "g";
+        }
+    });
+
+    document.getElementById('velocityUnitToggle').addEventListener('change', function(e) {
+        useMetersPerSec = e.target.checked;
+        const velocityInput = document.getElementById('velocity');
+        const velocityUnit = document.getElementById('velocityUnit');
+        
+        if (useMetersPerSec) {
+            // Convert fps to m/s (1 fps = 0.3048 m/s)
+            velocityInput.value = (parseFloat(velocityInput.value) * 0.3048).toFixed(1);
+            velocityInput.step = "1";
+            velocityUnit.textContent = "m/s";
+        } else {
+            // Convert m/s to fps
+            velocityInput.value = (parseFloat(velocityInput.value) / 0.3048).toFixed(0);
+            velocityInput.step = "10";
+            velocityUnit.textContent = "fps";
+        }
+    });
+
+    document.getElementById('energyUnitToggle').addEventListener('change', function(e) {
+        useFootPounds = e.target.checked;
+        // Recalculate to update display
+        if (currentTrajectoryData && currentMass) {
+            calculate();
+        }
+    });
 });
 
 function getInputValues() {
     const airDensity = calculateAirDensity();
     
+    // Get mass in kg
+    let massValue = parseFloat(document.getElementById('mass').value);
+    if (useGrains) {
+        // Convert grains to grams first, then to kg
+        massValue = (massValue / 15.4324) / 1000;
+    } else {
+        // Convert grams to kg
+        massValue = massValue / 1000;
+    }
+    
+    // Get velocity in m/s
+    let velocityValue = parseFloat(document.getElementById('velocity').value);
+    if (!useMetersPerSec) {
+        // Convert fps to m/s
+        velocityValue = velocityValue * 0.3048;
+    }
+    
     return {
-        velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
+        velocity: velocityValue,
         angle: parseFloat(document.getElementById('angle').value),
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
         scopeHeight: parseFloat(document.getElementById('scopeHeight').value) / 1000, // Convert mm to m
-        mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
+        mass: massValue,
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
         diameter: parseFloat(document.getElementById('diameter').value) / 1000, // Convert mm to m
         airDensity: airDensity,
@@ -86,6 +153,15 @@ function calculate() {
 function displayResults(withDrag, noDrag, energy, momentum) {
     const resultsDiv = document.getElementById('results');
     
+    // Convert energy if needed
+    let energyValue = energy;
+    let energyUnit = 'J';
+    if (useFootPounds) {
+        // Convert joules to foot-pounds (1 J = 0.737562 ft-lbs)
+        energyValue = energy * 0.737562;
+        energyUnit = 'ft-lbs';
+    }
+    
     resultsDiv.innerHTML = `
         <div class="results-grid">
             <div class="result-card">
@@ -109,8 +185,8 @@ function displayResults(withDrag, noDrag, energy, momentum) {
             </div>
             
             <div class="result-card">
-                <div class="result-value">${energy.toFixed(0)}</div>
-                <div class="result-label">初期エネルギー (J)</div>
+                <div class="result-value">${energyValue.toFixed(0)}</div>
+                <div class="result-label">初期エネルギー (${energyUnit})</div>
             </div>
             
             <div class="result-card">
@@ -324,7 +400,8 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 y: py,
                 height: closestPoint.y,
                 velocityFps: velocityFps,
-                energy: energy
+                energy: energy,
+                energyInJoules: energy  // Always store in joules for conversion
             });
             
             // Draw small circle marker
@@ -513,11 +590,19 @@ canvas.addEventListener('mousemove', function(e) {
         for (let marker of chartScales.distanceMarkers) {
             const markerDist = Math.sqrt(Math.pow(mouseX - marker.x, 2) + Math.pow(mouseY - marker.y, 2));
             if (markerDist < 15) { // Within 15 pixels of marker
+                // Convert energy if needed
+                let energyValue = marker.energyInJoules;
+                let energyUnit = 'J';
+                if (useFootPounds) {
+                    energyValue = marker.energyInJoules * 0.737562;
+                    energyUnit = 'ft-lbs';
+                }
+                
                 tooltip.innerHTML = `
                     <strong>${marker.distance}m</strong><br>
                     高度: ${marker.height.toFixed(1)}m<br>
                     速度: ${marker.velocityFps.toFixed(0)} fps<br>
-                    エネルギー: ${marker.energy.toFixed(0)} J
+                    エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
                 `;
                 
                 tooltip.style.left = (mouseX + 10) + 'px';
@@ -550,11 +635,19 @@ canvas.addEventListener('mousemove', function(e) {
         const velocityFps = velocity / 0.3048;
         const energy = calculator.calculateEnergy(currentMass, velocity);
         
+        // Convert energy if needed
+        let energyValue = energy;
+        let energyUnit = 'J';
+        if (useFootPounds) {
+            energyValue = energy * 0.737562;
+            energyUnit = 'ft-lbs';
+        }
+        
         tooltip.innerHTML = `
             距離: ${closestPoint.x.toFixed(1)}m<br>
             高度: ${closestPoint.y.toFixed(1)}m<br>
             速度: ${velocityFps.toFixed(0)} fps<br>
-            エネルギー: ${energy.toFixed(0)} J
+            エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
         `;
         
         tooltip.style.left = (mouseX + 10) + 'px';
