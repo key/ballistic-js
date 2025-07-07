@@ -1,7 +1,7 @@
 class BallisticsCalculator {
     constructor() {
         this.g = 9.81; // gravity (m/s²)
-        this.timeStep = 0.01; // time step for simulation (s)
+        this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
     }
 
     calculateTrajectory(params) {

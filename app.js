@@ -4,36 +4,39 @@ let currentTrajectoryData = null;
 let currentMass = null;
 let chartScales = null;
 
-document.getElementById('calculate').addEventListener('click', calculate);
-document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('calculate').addEventListener('click', calculate);
+    document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
 
-// Add event listeners for environment inputs
-const envInputs = ['temperature', 'pressure', 'humidity', 'altitude'];
-envInputs.forEach(id => {
-    document.getElementById(id).addEventListener('input', updateCalculatedValues);
-});
+    // Add event listeners for environment inputs
+    const envInputs = ['temperature', 'pressure', 'humidity', 'altitude'];
+    envInputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCalculatedValues);
+    });
 
-// Add event listener for zero-in distance
-document.getElementById('zeroDistance').addEventListener('change', calculateZeroAngle);
+    // Remove automatic calculation on zero-in distance change
+    // Calculation will happen when "計算" button is clicked
 
-// Initial calculation of air density
-updateCalculatedValues();
+    // Initial calculation of air density
+    updateCalculatedValues();
 
-// Tab functionality
-const tabButtons = document.querySelectorAll('.tab-button');
-const tabPanels = document.querySelectorAll('.tab-panel');
+    // Tab functionality
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanels = document.querySelectorAll('.tab-panel');
 
-tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const targetTab = button.getAttribute('data-tab');
-        
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-        
-        // Add active class to clicked button and corresponding panel
-        button.classList.add('active');
-        document.getElementById(targetTab).classList.add('active');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanels.forEach(panel => panel.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding panel
+            button.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+        });
     });
 });
 
@@ -55,7 +58,18 @@ function getInputValues() {
 }
 
 function calculate() {
+    console.log('calculate() called');
+    // Check if zero-in distance is selected and calculate angle if needed
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    console.log('zeroDistance in calculate:', zeroDistance);
+    if (zeroDistance) {
+        console.log('Calling calculateZeroAngle...');
+        calculateZeroAngle();
+        // Get parameters after angle calculation
+    }
+    
     const params = getInputValues();
+    console.log('Using angle:', params.angle);
     
     const withDrag = calculator.calculateTrajectory(params);
     const noDrag = calculator.calculateNoDrag(params.velocity, params.angle);
@@ -342,82 +356,146 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
 }
 
 function calculateZeroAngle() {
+    console.log('calculateZeroAngle called');
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    console.log('zeroDistance:', zeroDistance);
     if (!zeroDistance) {
         return; // No zero distance selected
     }
     
     const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const targetHeight = initialHeight + scopeHeight; // Target height where trajectory should cross at zero distance
+    // Note: For first zero to exist, the barrel must be below the scope
+    // Typically, barrel is below scope by the scope height amount
+    const barrelHeight = initialHeight; // This is the height of the barrel
+    const scopeCenterHeight = barrelHeight + scopeHeight; // This is the height of scope center
+    const targetHeight = scopeCenterHeight; // We want trajectory to cross scope center height
+    console.log('barrelHeight:', barrelHeight, 'scopeHeight:', scopeHeight, 'scopeCenterHeight:', scopeCenterHeight);
     
     // Get current parameters
     const params = getInputValues();
+    console.log('Initial velocity:', params.velocity, 'm/s');
     
     // Use binary search to find the angle that gives us the zero distance
-    let lowAngle = -10;
-    let highAngle = 10;
+    let lowAngle = 0;      // Start from 0 degrees
+    let highAngle = 0.01;  // Start with 0.01 degrees for first zero
     let bestAngle = 0;
+    let bestDistanceDiff = Infinity;  // Track best distance difference
     let iterations = 0;
-    const maxIterations = 50;
-    const tolerance = 0.1; // 0.1m tolerance
+    const maxIterations = 100;  // More iterations for better precision
+    const tolerance = 0.5; // 0.5m tolerance for distance
     
-    while (iterations < maxIterations && (highAngle - lowAngle) > 0.001) {
+    while (iterations < maxIterations && (highAngle - lowAngle) > 0.0001) {  // Better precision
         const midAngle = (lowAngle + highAngle) / 2;
         
         // Calculate trajectory with this angle
         const testParams = {...params, angle: midAngle};
-        const trajectory = calculator.calculateTrajectory(
-            testParams.velocity,
-            testParams.angle,
-            testParams.initialHeight,
-            testParams.mass,
-            testParams.dragCoeff,
-            testParams.diameter,
-            testParams.airDensity,
-            testParams.windSpeed,
-            testParams.windAngle
-        );
+        const trajectory = calculator.calculateTrajectory(testParams);
         
-        // Find where trajectory crosses scope height line at the zero distance
+        // Debug: Check if trajectory is valid
+        if (!trajectory || !trajectory.trajectory) {
+            console.error('Invalid trajectory returned');
+            continue;
+        }
+        
+        const trajectoryPoints = trajectory.trajectory;
+        console.log(`Angle ${midAngle}: trajectory has ${trajectoryPoints.length} points`);
+        
+        // Debug: Show first few points
+        if (trajectoryPoints.length > 5) {
+            console.log(`  First 5 points: y=${trajectoryPoints[0].y.toFixed(4)}, ${trajectoryPoints[1].y.toFixed(4)}, ${trajectoryPoints[2].y.toFixed(4)}, ${trajectoryPoints[3].y.toFixed(4)}, ${trajectoryPoints[4].y.toFixed(4)}`);
+            console.log(`  Target height: ${targetHeight.toFixed(4)}`);
+        }
+        
+        // Find first crossing point with scope height (first zero)
+        let firstZeroDistance = null;
         let crossingHeight = null;
-        for (let i = 1; i < trajectory.length; i++) {
-            if (trajectory[i].x >= zeroDistance) {
-                // Interpolate to find exact height at zero distance
-                const ratio = (zeroDistance - trajectory[i-1].x) / (trajectory[i].x - trajectory[i-1].x);
-                crossingHeight = trajectory[i-1].y + ratio * (trajectory[i].y - trajectory[i-1].y);
+        
+        // First, find where trajectory crosses scope height line
+        for (let i = 1; i < trajectoryPoints.length; i++) {
+            const prevHeight = trajectoryPoints[i-1].y;
+            const currHeight = trajectoryPoints[i].y;
+            
+            // Check if trajectory crosses the target height between these two points
+            if ((prevHeight <= targetHeight && currHeight >= targetHeight) || 
+                (prevHeight >= targetHeight && currHeight <= targetHeight)) {
+                // Interpolate to find exact crossing distance
+                const ratio = (targetHeight - prevHeight) / (currHeight - prevHeight);
+                firstZeroDistance = trajectoryPoints[i-1].x + ratio * (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
+                
+                // Only consider this if it's ascending (first zero)
+                if (trajectoryPoints[i].vy > 0 || (trajectoryPoints[i].vy === 0 && trajectoryPoints[i-1].vy > 0)) {
+                    console.log(`Angle ${midAngle}: first zero at ${firstZeroDistance}m (target: ${zeroDistance}m)`);
+                    break;
+                } else {
+                    console.log(`Angle ${midAngle}: found crossing at ${firstZeroDistance}m but vy=${trajectoryPoints[i].vy} (descending)`);
+                }
+            }
+        }
+        
+        // Now check the height at the target distance
+        for (let i = 1; i < trajectoryPoints.length; i++) {
+            if (trajectoryPoints[i].x >= zeroDistance) {
+                const ratio = (zeroDistance - trajectoryPoints[i-1].x) / (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
+                crossingHeight = trajectoryPoints[i-1].y + ratio * (trajectoryPoints[i].y - trajectoryPoints[i-1].y);
                 break;
             }
         }
         
-        if (crossingHeight === null) {
-            // Trajectory doesn't reach zero distance
-            lowAngle = midAngle;
-        } else {
-            // Calculate the difference between the trajectory height and target height at zero distance
+        // If we have the height at target distance, use it for binary search
+        if (crossingHeight !== null) {
             const heightDiff = crossingHeight - targetHeight;
             
-            if (Math.abs(heightDiff) < tolerance / 100) {
+            // Keep track of best angle
+            if (Math.abs(heightDiff) < Math.abs(bestDistanceDiff)) {
                 bestAngle = midAngle;
+                bestDistanceDiff = heightDiff;
+            }
+            
+            console.log(`Angle ${midAngle}: height at ${zeroDistance}m is ${crossingHeight}m (diff: ${heightDiff}m)`);
+            
+            if (Math.abs(heightDiff) < 0.001) { // 1mm tolerance
+                console.log(`Found solution! Height difference: ${heightDiff}m`);
                 break;
-            } else if (heightDiff > 0) {
-                // Shooting too high, reduce angle
-                highAngle = midAngle;
-            } else {
+            } else if (heightDiff < 0) {
                 // Shooting too low, increase angle
                 lowAngle = midAngle;
+                
+                // If we're at the high end and still too low, expand the range
+                if (midAngle > highAngle * 0.9 && iterations < 20) {
+                    highAngle *= 2;
+                    console.log(`Expanding angle range to ${highAngle} degrees`);
+                }
+            } else {
+                // Shooting too high, decrease angle
+                highAngle = midAngle;
             }
-            bestAngle = midAngle;
+        } else {
+            // Trajectory doesn't reach target distance
+            console.log(`Angle ${midAngle}: trajectory doesn't reach ${zeroDistance}m`);
+            lowAngle = midAngle;
+        }
+        
+        // Original first zero logic (kept for reference but not used for binary search)
+        if (firstZeroDistance !== null) {
+            console.log(`Note: First zero found at ${firstZeroDistance}m`);
         }
         
         iterations++;
     }
     
     // Set the calculated angle
-    document.getElementById('angle').value = bestAngle.toFixed(3);
+    console.log(`Calculation completed after ${iterations} iterations`);
+    console.log('Final calculated angle:', bestAngle, 'degrees');
+    console.log('Best distance difference:', bestDistanceDiff, 'm');
+    console.log('Final angle range:', lowAngle, 'to', highAngle);
     
-    // Trigger recalculation
-    calculate();
+    if (bestAngle === 0 && iterations === maxIterations) {
+        console.warn('Failed to find valid angle - may need to adjust initial range');
+    }
+    
+    document.getElementById('angle').value = bestAngle.toFixed(3);
+    console.log('Angle set to:', document.getElementById('angle').value);
 }
 
 function downloadCSV() {
