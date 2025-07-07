@@ -218,9 +218,9 @@ button:hover {
 .unit-switch {
     position: relative;
     display: inline-block;
-    width: 50px;
-    height: 24px;
-    margin: 0 8px;
+    width: 40px;
+    height: 22px;
+    margin: 0 6px;
 }
 
 .unit-switch input {
@@ -244,8 +244,8 @@ button:hover {
 .unit-slider:before {
     position: absolute;
     content: "";
-    height: 16px;
-    width: 16px;
+    height: 14px;
+    width: 14px;
     left: 4px;
     bottom: 4px;
     background-color: white;
@@ -258,7 +258,7 @@ input:checked + .unit-slider {
 }
 
 input:checked + .unit-slider:before {
-    transform: translateX(26px);
+    transform: translateX(18px);
 }
 
 .unit-label {
