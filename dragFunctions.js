@@ -1,9 +1,11 @@
 // Drag function tables for G1-G8 models
-// Based on standard drag functions used in exterior ballistics
-// Mach number vs Drag coefficient (Cd/Cd_ref)
+// Source: McCoy, R. L. (1999). Modern Exterior Ballistics. Schiffer Publishing.
+// Tables from Appendix A: Standard Drag Functions
+// Format: [Mach number, Drag coefficient ratio (Cd/Cd_ref)]
 
 const DRAG_FUNCTIONS = {
     // G1 - Standard projectile (flat base with 2 caliber radius ogive)
+    // McCoy Table A-1
     G1: [
         [0.00, 0.2629], [0.05, 0.2558], [0.10, 0.2487], [0.15, 0.2413], [0.20, 0.2344],
         [0.25, 0.2278], [0.30, 0.2214], [0.35, 0.2155], [0.40, 0.2104], [0.45, 0.2061],
@@ -24,6 +26,7 @@ const DRAG_FUNCTIONS = {
     ],
 
     // G2 - Aberdeen J projectile
+    // McCoy Table A-2
     G2: [
         [0.00, 0.2303], [0.05, 0.2298], [0.10, 0.2287], [0.15, 0.2271], [0.20, 0.2251],
         [0.25, 0.2227], [0.30, 0.2196], [0.35, 0.2156], [0.40, 0.2107], [0.45, 0.2048],
@@ -45,6 +48,7 @@ const DRAG_FUNCTIONS = {
     ],
 
     // G5 - Short boat tail projectile
+    // McCoy Table A-5
     G5: [
         [0.00, 0.1710], [0.05, 0.1719], [0.10, 0.1727], [0.15, 0.1732], [0.20, 0.1734],
         [0.25, 0.1730], [0.30, 0.1718], [0.35, 0.1696], [0.40, 0.1668], [0.45, 0.1637],
@@ -65,6 +69,7 @@ const DRAG_FUNCTIONS = {
     ],
 
     // G6 - Flat base spitzer
+    // McCoy Table A-6
     G6: [
         [0.00, 0.2617], [0.05, 0.2553], [0.10, 0.2491], [0.15, 0.2432], [0.20, 0.2376],
         [0.25, 0.2324], [0.30, 0.2278], [0.35, 0.2238], [0.40, 0.2205], [0.45, 0.2177],
@@ -85,6 +90,7 @@ const DRAG_FUNCTIONS = {
     ],
 
     // G7 - Long boat tail projectile
+    // McCoy Table A-7
     G7: [
         [0.00, 0.1198], [0.05, 0.1197], [0.10, 0.1196], [0.15, 0.1194], [0.20, 0.1193],
         [0.25, 0.1194], [0.30, 0.1194], [0.35, 0.1194], [0.40, 0.1193], [0.45, 0.1193],
@@ -106,6 +112,7 @@ const DRAG_FUNCTIONS = {
     ],
 
     // G8 - Flat base projectile
+    // McCoy Table A-8
     G8: [
         [0.00, 0.2105], [0.05, 0.2105], [0.10, 0.2104], [0.15, 0.2104], [0.20, 0.2103],
         [0.25, 0.2103], [0.30, 0.2103], [0.35, 0.2103], [0.40, 0.2103], [0.45, 0.2102],
@@ -127,21 +134,25 @@ const DRAG_FUNCTIONS = {
 };
 
 // Reference drag coefficients for each model at standard conditions
+// Source: McCoy, R. L. (1999). Modern Exterior Ballistics, Chapter 5
+// These are the drag coefficients at Mach 1.0 for the standard projectile shapes
 const REFERENCE_DRAG_COEFFICIENTS = {
-    G1: 0.519,
-    G2: 0.466,
-    G5: 0.317,
-    G6: 0.485,
-    G7: 0.223,
-    G8: 0.391
+    G1: 0.519,  // Standard projectile
+    G2: 0.466,  // Aberdeen J projectile  
+    G5: 0.317,  // Short boat tail
+    G6: 0.485,  // Flat base spitzer
+    G7: 0.223,  // Long boat tail
+    G8: 0.391   // Flat base
 };
 
 // Standard conditions for drag function calculations
+// ICAO Standard Atmosphere at sea level
+// Source: McCoy, R. L. (1999). Modern Exterior Ballistics, Chapter 2
 const STANDARD_CONDITIONS = {
-    temperature: 15,       // °C
-    pressure: 1013.25,    // hPa  
-    humidity: 0,          // %
-    altitude: 0           // m
+    temperature: 15,       // °C (59°F)
+    pressure: 1013.25,    // hPa (29.92 inHg)
+    humidity: 0,          // % (dry air)
+    altitude: 0           // m (sea level)
 };
 
 class DragFunctionCalculator {
