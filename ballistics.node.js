@@ -2,6 +2,7 @@ class BallisticsCalculator {
     constructor() {
         this.g = 9.81; // gravity (m/s²)
         this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
+        this.maxSimTime = 1000; // Maximum simulation time (s)
     }
 
     calculateTrajectory(params) {
@@ -47,7 +48,7 @@ class BallisticsCalculator {
             if (y > maxHeight) maxHeight = y;
             if (y >= 0) maxRange = x;
 
-            if (t > 1000) break; // Safety limit
+            if (t > this.maxSimTime) break; // Safety limit
         }
 
         const flightTime = t - this.timeStep;
