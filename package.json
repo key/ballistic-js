@@ -22,7 +22,7 @@
   "devDependencies": {
     "jest": "^30.0.4",
     "@babel/core": "^7.23.0",
-    "@babel/preset-env": "^7.23.0",
+    "@babel/preset-env": "^7.28.0",
     "babel-jest": "^30.0.4",
     "markdownlint-cli2": "^0.18.1"
   }
