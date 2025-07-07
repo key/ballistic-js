@@ -476,7 +476,8 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 height: closestPoint.y,
                 velocityFps: velocityFps,
                 energy: energy,
-                energyInJoules: energy  // Always store in joules for conversion
+                energyInJoules: energy,  // Always store in joules for conversion
+                scopeHeight: totalScopeHeight  // Store scope height for zero deviation calculation
             });
             
             // Draw small circle marker
@@ -681,9 +682,14 @@ canvas.addEventListener('mousemove', function(e) {
                     velocityUnit = 'm/s';
                 }
                 
+                // Calculate zero deviation in mm
+                const zeroDeviation = (marker.height - marker.scopeHeight) * 1000; // Convert m to mm
+                const deviationSign = zeroDeviation >= 0 ? '+' : '';
+                
                 tooltip.innerHTML = `
                     <strong>${marker.distance}m</strong><br>
                     高度: ${marker.height.toFixed(1)}m<br>
+                    ゼロ偏差: ${deviationSign}${zeroDeviation.toFixed(0)}mm<br>
                     速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
                     エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
                 `;
