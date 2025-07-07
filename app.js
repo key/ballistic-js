@@ -9,6 +9,56 @@ let useGrains = false;  // Mass: false = grams, true = grains
 let useMetersPerSec = false;  // Velocity: false = fps, true = m/s
 let useFootPounds = false;  // Energy: false = joules, true = ft-lbs
 
+// Cookie functions
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+// Load unit preferences from cookies
+function loadUnitPreferences() {
+    const massUnit = getCookie('massUnit');
+    const velocityUnit = getCookie('velocityUnit');
+    const energyUnit = getCookie('energyUnit');
+    
+    if (massUnit === 'grains') {
+        useGrains = true;
+        document.getElementById('massUnitToggle').checked = true;
+        document.getElementById('massUnit').textContent = 'gr';
+        // Convert default value to grains
+        const massInput = document.getElementById('mass');
+        massInput.value = (parseFloat(massInput.value) * 15.4324).toFixed(1);
+        massInput.step = "1";
+    }
+    
+    if (velocityUnit === 'mps') {
+        useMetersPerSec = true;
+        document.getElementById('velocityUnitToggle').checked = true;
+        document.getElementById('velocityUnit').textContent = 'm/s';
+        // Convert default value to m/s
+        const velocityInput = document.getElementById('velocity');
+        velocityInput.value = (parseFloat(velocityInput.value) * 0.3048).toFixed(1);
+        velocityInput.step = "1";
+    }
+    
+    if (energyUnit === 'ftlbs') {
+        useFootPounds = true;
+        document.getElementById('energyUnitToggle').checked = true;
+    }
+}
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('calculate').addEventListener('click', calculate);
@@ -25,6 +75,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial calculation of air density
     updateCalculatedValues();
+    
+    // Load unit preferences from cookies
+    loadUnitPreferences();
 
     // Tab functionality
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -55,11 +108,13 @@ document.addEventListener('DOMContentLoaded', function() {
             massInput.value = (parseFloat(massInput.value) * 15.4324).toFixed(1);
             massInput.step = "1";
             massUnit.textContent = "gr";
+            setCookie('massUnit', 'grains', 365);
         } else {
             // Convert grains to grams
             massInput.value = (parseFloat(massInput.value) / 15.4324).toFixed(1);
             massInput.step = "0.1";
             massUnit.textContent = "g";
+            setCookie('massUnit', 'grams', 365);
         }
     });
 
@@ -73,16 +128,19 @@ document.addEventListener('DOMContentLoaded', function() {
             velocityInput.value = (parseFloat(velocityInput.value) * 0.3048).toFixed(1);
             velocityInput.step = "1";
             velocityUnit.textContent = "m/s";
+            setCookie('velocityUnit', 'mps', 365);
         } else {
             // Convert m/s to fps
             velocityInput.value = (parseFloat(velocityInput.value) / 0.3048).toFixed(0);
             velocityInput.step = "10";
             velocityUnit.textContent = "fps";
+            setCookie('velocityUnit', 'fps', 365);
         }
     });
 
     document.getElementById('energyUnitToggle').addEventListener('change', function(e) {
         useFootPounds = e.target.checked;
+        setCookie('energyUnit', useFootPounds ? 'ftlbs' : 'joules', 365);
         // Recalculate to update display
         if (currentTrajectoryData && currentMass) {
             calculate();
