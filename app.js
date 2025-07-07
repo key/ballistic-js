@@ -226,7 +226,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.fillStyle = '#4444ff';
     ctx.font = '10px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`スコープ高さ: ${totalScopeHeight.toFixed(3)}m`, margin + 5, scopeY - 5);
+    ctx.fillText(`スコープハイト: ${totalScopeHeight.toFixed(3)}m`, margin + 5, scopeY - 5);
     
     // Draw zero-in distance marker if selected
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
@@ -349,6 +349,7 @@ function calculateZeroAngle() {
     
     const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const targetHeight = initialHeight + scopeHeight; // Target height where trajectory should cross at zero distance
     
     // Get current parameters
     const params = getInputValues();
@@ -393,7 +394,8 @@ function calculateZeroAngle() {
             // Trajectory doesn't reach zero distance
             lowAngle = midAngle;
         } else {
-            const heightDiff = crossingHeight - (initialHeight + scopeHeight);
+            // Calculate the difference between the trajectory height and target height at zero distance
+            const heightDiff = crossingHeight - targetHeight;
             
             if (Math.abs(heightDiff) < tolerance / 100) {
                 bestAngle = midAngle;
