@@ -58,18 +58,14 @@ function getInputValues() {
 }
 
 function calculate() {
-    console.log('calculate() called');
     // Check if zero-in distance is selected and calculate angle if needed
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
-    console.log('zeroDistance in calculate:', zeroDistance);
     if (zeroDistance) {
-        console.log('Calling calculateZeroAngle...');
         calculateZeroAngle();
         // Get parameters after angle calculation
     }
     
     const params = getInputValues();
-    console.log('Using angle:', params.angle);
     
     const withDrag = calculator.calculateTrajectory(params);
     const noDrag = calculator.calculateNoDrag(params.velocity, params.angle);
@@ -300,10 +296,9 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.fillStyle = '#333';
     ctx.fillText('空気抵抗あり', canvas.width - 130, 32);
     
-    // Display velocity and energy at specific distances
+    // Store distance marker data for mouse interaction
+    const distanceMarkers = [];
     const distances = [50, 100, 150, 200, 300];
-    ctx.fillStyle = '#333';
-    ctx.font = '11px Arial';
     
     distances.forEach(distance => {
         // Find the trajectory point closest to this distance
@@ -327,54 +322,40 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             const px = margin + distance * scaleX;
             const py = canvas.height - margin - closestPoint.y * scaleY;
             
-            // Draw vertical line at this distance
-            ctx.strokeStyle = '#999';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
+            // Store marker data for interaction
+            distanceMarkers.push({
+                distance: distance,
+                x: px,
+                y: py,
+                height: closestPoint.y,
+                velocityFps: velocityFps,
+                energy: energy
+            });
+            
+            // Draw small circle marker
+            ctx.fillStyle = '#666';
             ctx.beginPath();
-            ctx.moveTo(px, margin);
-            ctx.lineTo(px, canvas.height - margin);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw data box
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(px - 40, py - 55, 80, 58);
-            
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(px - 40, py - 55, 80, 58);
-            
-            ctx.fillStyle = '#333';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${distance}m`, px, py - 43);
-            ctx.fillText(`${closestPoint.y.toFixed(1)}m`, px, py - 30);
-            ctx.fillText(`${velocityFps.toFixed(0)} fps`, px, py - 17);
-            ctx.fillText(`${energy.toFixed(0)} J`, px, py - 4);
+            ctx.arc(px, py, 4, 0, 2 * Math.PI);
+            ctx.fill();
         }
     });
+    
+    // Store markers for mouse/touch interaction
+    chartScales.distanceMarkers = distanceMarkers;
 }
 
 function calculateZeroAngle() {
-    console.log('calculateZeroAngle called');
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
-    console.log('zeroDistance:', zeroDistance);
     if (!zeroDistance) {
         return; // No zero distance selected
     }
     
     const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    // Note: For first zero to exist, the barrel must be below the scope
-    // Typically, barrel is below scope by the scope height amount
-    const barrelHeight = initialHeight; // This is the height of the barrel
-    const scopeCenterHeight = barrelHeight + scopeHeight; // This is the height of scope center
-    const targetHeight = scopeCenterHeight; // We want trajectory to cross scope center height
-    console.log('barrelHeight:', barrelHeight, 'scopeHeight:', scopeHeight, 'scopeCenterHeight:', scopeCenterHeight);
+    const targetHeight = initialHeight + scopeHeight; // Target height = barrel height + scope height
     
     // Get current parameters
     const params = getInputValues();
-    console.log('Initial velocity:', params.velocity, 'm/s');
     
     // Use binary search to find the angle that gives us the zero distance
     let lowAngle = 0;      // Start from 0 degrees
@@ -392,20 +373,12 @@ function calculateZeroAngle() {
         const testParams = {...params, angle: midAngle};
         const trajectory = calculator.calculateTrajectory(testParams);
         
-        // Debug: Check if trajectory is valid
+        // Check if trajectory is valid
         if (!trajectory || !trajectory.trajectory) {
-            console.error('Invalid trajectory returned');
             continue;
         }
         
         const trajectoryPoints = trajectory.trajectory;
-        console.log(`Angle ${midAngle}: trajectory has ${trajectoryPoints.length} points`);
-        
-        // Debug: Show first few points
-        if (trajectoryPoints.length > 5) {
-            console.log(`  First 5 points: y=${trajectoryPoints[0].y.toFixed(4)}, ${trajectoryPoints[1].y.toFixed(4)}, ${trajectoryPoints[2].y.toFixed(4)}, ${trajectoryPoints[3].y.toFixed(4)}, ${trajectoryPoints[4].y.toFixed(4)}`);
-            console.log(`  Target height: ${targetHeight.toFixed(4)}`);
-        }
         
         // Find first crossing point with scope height (first zero)
         let firstZeroDistance = null;
@@ -425,10 +398,7 @@ function calculateZeroAngle() {
                 
                 // Only consider this if it's ascending (first zero)
                 if (trajectoryPoints[i].vy > 0 || (trajectoryPoints[i].vy === 0 && trajectoryPoints[i-1].vy > 0)) {
-                    console.log(`Angle ${midAngle}: first zero at ${firstZeroDistance}m (target: ${zeroDistance}m)`);
                     break;
-                } else {
-                    console.log(`Angle ${midAngle}: found crossing at ${firstZeroDistance}m but vy=${trajectoryPoints[i].vy} (descending)`);
                 }
             }
         }
@@ -452,10 +422,7 @@ function calculateZeroAngle() {
                 bestDistanceDiff = heightDiff;
             }
             
-            console.log(`Angle ${midAngle}: height at ${zeroDistance}m is ${crossingHeight}m (diff: ${heightDiff}m)`);
-            
             if (Math.abs(heightDiff) < 0.001) { // 1mm tolerance
-                console.log(`Found solution! Height difference: ${heightDiff}m`);
                 break;
             } else if (heightDiff < 0) {
                 // Shooting too low, increase angle
@@ -464,7 +431,6 @@ function calculateZeroAngle() {
                 // If we're at the high end and still too low, expand the range
                 if (midAngle > highAngle * 0.9 && iterations < 20) {
                     highAngle *= 2;
-                    console.log(`Expanding angle range to ${highAngle} degrees`);
                 }
             } else {
                 // Shooting too high, decrease angle
@@ -472,30 +438,14 @@ function calculateZeroAngle() {
             }
         } else {
             // Trajectory doesn't reach target distance
-            console.log(`Angle ${midAngle}: trajectory doesn't reach ${zeroDistance}m`);
             lowAngle = midAngle;
-        }
-        
-        // Original first zero logic (kept for reference but not used for binary search)
-        if (firstZeroDistance !== null) {
-            console.log(`Note: First zero found at ${firstZeroDistance}m`);
         }
         
         iterations++;
     }
     
     // Set the calculated angle
-    console.log(`Calculation completed after ${iterations} iterations`);
-    console.log('Final calculated angle:', bestAngle, 'degrees');
-    console.log('Best distance difference:', bestDistanceDiff, 'm');
-    console.log('Final angle range:', lowAngle, 'to', highAngle);
-    
-    if (bestAngle === 0 && iterations === maxIterations) {
-        console.warn('Failed to find valid angle - may need to adjust initial range');
-    }
-    
     document.getElementById('angle').value = bestAngle.toFixed(3);
-    console.log('Angle set to:', document.getElementById('angle').value);
 }
 
 function downloadCSV() {
@@ -563,6 +513,26 @@ canvas.addEventListener('mousemove', function(e) {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    // Check if near a distance marker first
+    if (chartScales.distanceMarkers) {
+        for (let marker of chartScales.distanceMarkers) {
+            const markerDist = Math.sqrt(Math.pow(mouseX - marker.x, 2) + Math.pow(mouseY - marker.y, 2));
+            if (markerDist < 15) { // Within 15 pixels of marker
+                tooltip.innerHTML = `
+                    <strong>${marker.distance}m</strong><br>
+                    高度: ${marker.height.toFixed(1)}m<br>
+                    速度: ${marker.velocityFps.toFixed(0)} fps<br>
+                    エネルギー: ${marker.energy.toFixed(0)} J
+                `;
+                
+                tooltip.style.left = (mouseX + 10) + 'px';
+                tooltip.style.top = (mouseY - 60) + 'px';
+                tooltip.style.display = 'block';
+                return;
+            }
+        }
+    }
+    
     // Convert mouse position to chart coordinates
     const chartX = (mouseX - chartScales.margin) / chartScales.scaleX;
     const chartY = (canvas.height - mouseY - chartScales.margin) / chartScales.scaleY;
@@ -592,8 +562,8 @@ canvas.addEventListener('mousemove', function(e) {
             エネルギー: ${energy.toFixed(0)} J
         `;
         
-        tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
-        tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+        tooltip.style.left = (mouseX + 10) + 'px';
+        tooltip.style.top = (mouseY - 40) + 'px';
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
@@ -601,6 +571,31 @@ canvas.addEventListener('mousemove', function(e) {
 });
 
 canvas.addEventListener('mouseleave', function() {
+    tooltip.style.display = 'none';
+});
+
+// Touch support for mobile devices
+canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchend', function() {
     tooltip.style.display = 'none';
 });
 
