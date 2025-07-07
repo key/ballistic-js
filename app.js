@@ -4,6 +4,95 @@ let currentTrajectoryData = null;
 let currentMass = null;
 let chartScales = null;
 
+// Unit conversion constants
+const GRAMS_TO_GRAINS = 15.4324;
+const FPS_TO_MPS = 0.3048;
+const JOULES_TO_FTLBF = 0.737562;
+const MM_TO_M = 0.001;
+const M_TO_MM = 1000;
+
+// Environmental calculation constants
+const ALTITUDE_TEMP_GRADIENT = 0.0065;  // Temperature gradient K/m
+const SEA_LEVEL_TEMP = 288.15;  // Sea level standard temperature K
+const BAROMETRIC_EXPONENT = -5.255;  // Barometric formula exponent
+const GAS_CONSTANT = 8.314462618;  // Universal gas constant J/(mol·K)
+const DRY_AIR_MOLAR_MASS = 0.0289644;  // kg/mol
+const WATER_VAPOR_MOLAR_MASS = 0.01801528;  // kg/mol
+const CELSIUS_TO_KELVIN = 273.15;
+const SOUND_SPEED_BASE = 331.5;  // Base sound speed at 0°C (m/s)
+const SOUND_SPEED_TEMP_COEFF = 0.6;  // Temperature coefficient for sound speed
+
+// Cookie constants
+const COOKIE_EXPIRY_DAYS = 365;
+
+// Unit conversion states
+let useGrains = false;  // Mass: false = grams, true = grains
+let useMetersPerSec = false;  // Velocity: false = fps, true = m/s
+let useFootPounds = false;  // Energy: false = joules, true = ft-lbf
+
+// Cookie functions
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+// Load unit preferences from cookies
+function loadUnitPreferences() {
+    const massUnit = getCookie('massUnit');
+    const velocityUnit = getCookie('velocityUnit');
+    const energyUnit = getCookie('energyUnit');
+    
+    // Load mass unit preference
+    const massInput = document.getElementById('mass');
+    const defaultMassValue = parseFloat(massInput.getAttribute('data-default-value') || massInput.value);
+    
+    if (massUnit === 'grains') {
+        useGrains = true;
+        document.getElementById('massUnitToggle').checked = true;
+        document.getElementById('massUnit').textContent = 'gr';
+        // Convert default value to grains
+        massInput.value = (defaultMassValue * GRAMS_TO_GRAINS).toFixed(1);
+        massInput.step = "1";
+    } else {
+        // Default is grams
+        massInput.value = defaultMassValue;
+    }
+    
+    // Load velocity unit preference
+    const velocityInput = document.getElementById('velocity');
+    const defaultVelocityValue = parseFloat(velocityInput.getAttribute('data-default-value') || velocityInput.value);
+    
+    if (velocityUnit === 'mps') {
+        useMetersPerSec = true;
+        document.getElementById('velocityUnitToggle').checked = true;
+        document.getElementById('velocityUnit').textContent = 'm/s';
+        // Convert default value to m/s
+        velocityInput.value = (defaultVelocityValue * FPS_TO_MPS).toFixed(1);
+        velocityInput.step = "1";
+    } else {
+        // Default is fps
+        velocityInput.value = defaultVelocityValue;
+    }
+    
+    // Load energy unit preference
+    if (energyUnit === 'ftlbf') {
+        useFootPounds = true;
+        document.getElementById('energyUnitToggle').checked = true;
+    }
+}
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('calculate').addEventListener('click', calculate);
@@ -20,6 +109,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial calculation of air density
     updateCalculatedValues();
+    
+    // Load unit preferences from cookies
+    loadUnitPreferences();
 
     // Tab functionality
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -38,19 +130,86 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(targetTab).classList.add('active');
         });
     });
+
+    // Unit toggle event listeners
+    document.getElementById('massUnitToggle').addEventListener('change', function(e) {
+        useGrains = e.target.checked;
+        const massInput = document.getElementById('mass');
+        const massUnit = document.getElementById('massUnit');
+        
+        if (useGrains) {
+            // Convert grams to grains
+            massInput.value = (parseFloat(massInput.value) * GRAMS_TO_GRAINS).toFixed(1);
+            massInput.step = "1";
+            massUnit.textContent = "gr";
+            setCookie('massUnit', 'grains', COOKIE_EXPIRY_DAYS);
+        } else {
+            // Convert grains to grams
+            massInput.value = (parseFloat(massInput.value) / GRAMS_TO_GRAINS).toFixed(1);
+            massInput.step = "0.1";
+            massUnit.textContent = "g";
+            setCookie('massUnit', 'grams', COOKIE_EXPIRY_DAYS);
+        }
+    });
+
+    document.getElementById('velocityUnitToggle').addEventListener('change', function(e) {
+        useMetersPerSec = e.target.checked;
+        const velocityInput = document.getElementById('velocity');
+        const velocityUnit = document.getElementById('velocityUnit');
+        
+        if (useMetersPerSec) {
+            // Convert fps to m/s
+            velocityInput.value = (parseFloat(velocityInput.value) * FPS_TO_MPS).toFixed(1);
+            velocityInput.step = "1";
+            velocityUnit.textContent = "m/s";
+            setCookie('velocityUnit', 'mps', COOKIE_EXPIRY_DAYS);
+        } else {
+            // Convert m/s to fps
+            velocityInput.value = (parseFloat(velocityInput.value) / FPS_TO_MPS).toFixed(0);
+            velocityInput.step = "10";
+            velocityUnit.textContent = "fps";
+            setCookie('velocityUnit', 'fps', COOKIE_EXPIRY_DAYS);
+        }
+    });
+
+    document.getElementById('energyUnitToggle').addEventListener('change', function(e) {
+        useFootPounds = e.target.checked;
+        setCookie('energyUnit', useFootPounds ? 'ftlbf' : 'joules', COOKIE_EXPIRY_DAYS);
+        // Recalculate to update display
+        if (currentTrajectoryData && currentMass) {
+            calculate();
+        }
+    });
 });
 
 function getInputValues() {
     const airDensity = calculateAirDensity();
     
+    // Get mass in kg
+    let massValue = parseFloat(document.getElementById('mass').value);
+    if (useGrains) {
+        // Convert grains to grams first, then to kg
+        massValue = (massValue / GRAMS_TO_GRAINS) * MM_TO_M;
+    } else {
+        // Convert grams to kg
+        massValue = massValue * MM_TO_M;
+    }
+    
+    // Get velocity in m/s
+    let velocityValue = parseFloat(document.getElementById('velocity').value);
+    if (!useMetersPerSec) {
+        // Convert fps to m/s
+        velocityValue = velocityValue * FPS_TO_MPS;
+    }
+    
     return {
-        velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
+        velocity: velocityValue,
         angle: parseFloat(document.getElementById('angle').value),
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
-        scopeHeight: parseFloat(document.getElementById('scopeHeight').value) / 1000, // Convert mm to m
-        mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
+        scopeHeight: parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M, // Convert mm to m
+        mass: massValue,
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
-        diameter: parseFloat(document.getElementById('diameter').value) / 1000, // Convert mm to m
+        diameter: parseFloat(document.getElementById('diameter').value) * MM_TO_M, // Convert mm to m
         airDensity: airDensity,
         windSpeed: parseFloat(document.getElementById('windSpeed').value),
         windAngle: parseFloat(document.getElementById('windAngle').value)
@@ -86,6 +245,24 @@ function calculate() {
 function displayResults(withDrag, noDrag, energy, momentum) {
     const resultsDiv = document.getElementById('results');
     
+    // Convert energy if needed
+    let energyValue = energy;
+    let energyUnit = 'J';
+    if (useFootPounds) {
+        // Convert joules to foot-pounds force
+        energyValue = energy * JOULES_TO_FTLBF;
+        energyUnit = 'ft-lbf';
+    }
+    
+    // Convert impact velocity if needed
+    let impactVelocityValue = withDrag.impactVelocity;
+    let velocityUnit = 'm/s';
+    if (!useMetersPerSec) {
+        // Convert m/s to fps
+        impactVelocityValue = withDrag.impactVelocity / FPS_TO_MPS;
+        velocityUnit = 'fps';
+    }
+    
     resultsDiv.innerHTML = `
         <div class="results-grid">
             <div class="result-card">
@@ -104,18 +281,13 @@ function displayResults(withDrag, noDrag, energy, momentum) {
             </div>
             
             <div class="result-card">
-                <div class="result-value">${(withDrag.impactVelocity / 0.3048).toFixed(0)}</div>
-                <div class="result-label">着弾速度 (fps)</div>
+                <div class="result-value">${impactVelocityValue.toFixed(useMetersPerSec ? 1 : 0)}</div>
+                <div class="result-label">着弾速度 (${velocityUnit})</div>
             </div>
             
             <div class="result-card">
-                <div class="result-value">${energy.toFixed(0)}</div>
-                <div class="result-label">初期エネルギー (J)</div>
-            </div>
-            
-            <div class="result-card">
-                <div class="result-value">${((withDrag.maxRange / noDrag.maxRange) * 100).toFixed(0)}%</div>
-                <div class="result-label">射程効率</div>
+                <div class="result-value">${energyValue.toFixed(0)}</div>
+                <div class="result-label">初期エネルギー (${energyUnit})</div>
             </div>
         </div>
     `;
@@ -219,7 +391,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     
     // Draw scope height line
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
     const totalScopeHeight = initialHeight + scopeHeight;
     
     ctx.strokeStyle = '#4444ff';
@@ -310,7 +482,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         
         if (closestPoint && closestPoint.x <= maxX) {
             const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-            const velocityFps = velocity / 0.3048; // Convert m/s to fps
+            const velocityFps = velocity / FPS_TO_MPS; // Convert m/s to fps
             const energy = calculator.calculateEnergy(mass, velocity);
             
             // Use exact distance for x position to align with grid lines
@@ -324,7 +496,9 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 y: py,
                 height: closestPoint.y,
                 velocityFps: velocityFps,
-                energy: energy
+                energy: energy,
+                energyInJoules: energy,  // Always store in joules for conversion
+                scopeHeight: totalScopeHeight  // Store scope height for zero deviation calculation
             });
             
             // Draw small circle marker
@@ -345,7 +519,7 @@ function calculateZeroAngle() {
         return; // No zero distance selected
     }
     
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
     const targetHeight = initialHeight + scopeHeight; // Target height = barrel height + scope height
     
@@ -459,7 +633,7 @@ function downloadCSV() {
             processedDistances.add(distance);
             
             const velocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
-            const velocityFps = velocity / 0.3048;
+            const velocityFps = velocity / FPS_TO_MPS;
             const energy = calculator.calculateEnergy(currentMass, velocity);
             
             dataPoints.push({
@@ -513,13 +687,35 @@ canvas.addEventListener('mousemove', function(e) {
         for (let marker of chartScales.distanceMarkers) {
             const markerDist = Math.sqrt(Math.pow(mouseX - marker.x, 2) + Math.pow(mouseY - marker.y, 2));
             if (markerDist < 15) { // Within 15 pixels of marker
+                // Convert energy if needed
+                let energyValue = marker.energyInJoules;
+                let energyUnit = 'J';
+                if (useFootPounds) {
+                    energyValue = marker.energyInJoules * JOULES_TO_FTLBF;
+                    energyUnit = 'ft-lbf';
+                }
+                
+                // Convert velocity if needed
+                let velocityValue = marker.velocityFps;
+                let velocityUnit = 'fps';
+                if (useMetersPerSec) {
+                    velocityValue = marker.velocityFps * FPS_TO_MPS;
+                    velocityUnit = 'm/s';
+                }
+                
+                // Calculate zero deviation in mm
+                const zeroDeviation = (marker.height - marker.scopeHeight) * M_TO_MM; // Convert m to mm
+                const deviationSign = zeroDeviation >= 0 ? '+' : '';
+                
                 tooltip.innerHTML = `
                     <strong>${marker.distance}m</strong><br>
                     高度: ${marker.height.toFixed(1)}m<br>
-                    速度: ${marker.velocityFps.toFixed(0)} fps<br>
-                    エネルギー: ${marker.energy.toFixed(0)} J
+                    ゼロ偏差: ${deviationSign}${zeroDeviation.toFixed(0)}mm<br>
+                    速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
+                    エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
                 `;
                 
+                tooltip.className = 'tooltip marker-tooltip';
                 tooltip.style.left = (mouseX + 10) + 'px';
                 tooltip.style.top = (mouseY - 60) + 'px';
                 tooltip.style.display = 'block';
@@ -547,16 +743,32 @@ canvas.addEventListener('mousemove', function(e) {
     // Show tooltip if close enough to trajectory
     if (closestPoint && minDistance < 10) {
         const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-        const velocityFps = velocity / 0.3048;
         const energy = calculator.calculateEnergy(currentMass, velocity);
+        
+        // Convert velocity if needed
+        let velocityValue = velocity;
+        let velocityUnit = 'm/s';
+        if (!useMetersPerSec) {
+            velocityValue = velocity / FPS_TO_MPS;
+            velocityUnit = 'fps';
+        }
+        
+        // Convert energy if needed
+        let energyValue = energy;
+        let energyUnit = 'J';
+        if (useFootPounds) {
+            energyValue = energy * JOULES_TO_FTLBF;
+            energyUnit = 'ft-lbf';
+        }
         
         tooltip.innerHTML = `
             距離: ${closestPoint.x.toFixed(1)}m<br>
             高度: ${closestPoint.y.toFixed(1)}m<br>
-            速度: ${velocityFps.toFixed(0)} fps<br>
-            エネルギー: ${energy.toFixed(0)} J
+            速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
+            エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
         `;
         
+        tooltip.className = 'tooltip';
         tooltip.style.left = (mouseX + 10) + 'px';
         tooltip.style.top = (mouseY - 40) + 'px';
         tooltip.style.display = 'block';
@@ -601,7 +813,7 @@ function calculateAirDensity() {
     const altitude = parseFloat(document.getElementById('altitude').value);
     
     // 標高による気圧補正
-    const seaLevelPressure = pressure * Math.pow(1 - 0.0065 * altitude / 288.15, -5.255);
+    const seaLevelPressure = pressure * Math.pow(1 - ALTITUDE_TEMP_GRADIENT * altitude / SEA_LEVEL_TEMP, BAROMETRIC_EXPONENT);
     
     // 飽和水蒸気圧の計算 (Magnus formula)
     const Es = 6.1078 * Math.pow(10, (7.5 * temperature) / (temperature + 237.3));
@@ -616,25 +828,17 @@ function calculateAirDensity() {
     const Pv = E * 100; // hPa to Pa
     
     // 絶対温度
-    const T = temperature + 273.15;
+    const T = temperature + CELSIUS_TO_KELVIN;
     
     // 空気密度の計算
-    // ρ = (Pd * Md + Pv * Mv) / (R * T)
-    // Md = 28.9644 g/mol (乾燥空気のモル質量)
-    // Mv = 18.01528 g/mol (水蒸気のモル質量)
-    // R = 8.314462618 J/(mol·K) (気体定数)
-    const R = 8.314462618;
-    const Md = 0.0289644; // kg/mol
-    const Mv = 0.01801528; // kg/mol
-    
-    const airDensity = (Pd * Md + Pv * Mv) / (R * T);
+    const airDensity = (Pd * DRY_AIR_MOLAR_MASS + Pv * WATER_VAPOR_MOLAR_MASS) / (GAS_CONSTANT * T);
     
     return airDensity;
 }
 
 function calculateSoundSpeed(temperature) {
     // 音速 = 331.5 + 0.6 * temperature (m/s)
-    return 331.5 + 0.6 * temperature;
+    return SOUND_SPEED_BASE + SOUND_SPEED_TEMP_COEFF * temperature;
 }
 
 function updateCalculatedValues() {

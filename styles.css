@@ -95,22 +95,10 @@ small {
     color: #666;
 }
 
-.input-group {
-    margin: 15px 0;
-}
-
 label {
     display: inline-block;
     width: 200px;
     font-weight: bold;
-}
-
-input[type="number"],
-select {
-    width: 150px;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
 }
 
 button {
@@ -217,4 +205,104 @@ button:hover {
 
 .github-icon {
     fill: currentColor;
+}
+
+/* Unit toggle switches */
+.unit-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 15px;
+    font-size: 14px;
+}
+
+.unit-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    margin: 0 6px;
+}
+
+.unit-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.unit-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.unit-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .unit-slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .unit-slider:before {
+    transform: translateX(16px);
+}
+
+.unit-label {
+    color: #666;
+    font-weight: normal;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.input-group > label {
+    flex: 0 0 200px;
+}
+
+.input-group > input[type="number"],
+.input-group > select {
+    flex: 0 0 150px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.section-header .unit-toggle {
+    margin-left: 0;
+}
+
+/* Tooltip styles */
+.tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+.tooltip.marker-tooltip {
+    background: rgba(0, 102, 204, 0.9);
+    border: 1px solid rgba(0, 153, 255, 0.8);
 }
