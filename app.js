@@ -197,11 +197,6 @@ function displayResults(withDrag, noDrag, energy, momentum) {
                 <div class="result-value">${energyValue.toFixed(0)}</div>
                 <div class="result-label">初期エネルギー (${energyUnit})</div>
             </div>
-            
-            <div class="result-card">
-                <div class="result-value">${((withDrag.maxRange / noDrag.maxRange) * 100).toFixed(0)}%</div>
-                <div class="result-label">射程効率</div>
-            </div>
         </div>
     `;
 }
