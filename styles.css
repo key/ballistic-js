@@ -182,3 +182,38 @@ button:hover {
     margin: 20px auto;
     display: block;
 }
+
+.footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f9f9f9;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.github-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.github-link:hover {
+    background-color: #333;
+    color: white;
+}
+
+.github-icon {
+    fill: currentColor;
+}
