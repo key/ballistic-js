@@ -162,6 +162,15 @@ function displayResults(withDrag, noDrag, energy, momentum) {
         energyUnit = 'ft-lbs';
     }
     
+    // Convert impact velocity if needed
+    let impactVelocityValue = withDrag.impactVelocity;
+    let velocityUnit = 'm/s';
+    if (!useMetersPerSec) {
+        // Convert m/s to fps
+        impactVelocityValue = withDrag.impactVelocity / 0.3048;
+        velocityUnit = 'fps';
+    }
+    
     resultsDiv.innerHTML = `
         <div class="results-grid">
             <div class="result-card">
@@ -180,8 +189,8 @@ function displayResults(withDrag, noDrag, energy, momentum) {
             </div>
             
             <div class="result-card">
-                <div class="result-value">${(withDrag.impactVelocity / 0.3048).toFixed(0)}</div>
-                <div class="result-label">着弾速度 (fps)</div>
+                <div class="result-value">${impactVelocityValue.toFixed(useMetersPerSec ? 1 : 0)}</div>
+                <div class="result-label">着弾速度 (${velocityUnit})</div>
             </div>
             
             <div class="result-card">
@@ -598,10 +607,18 @@ canvas.addEventListener('mousemove', function(e) {
                     energyUnit = 'ft-lbs';
                 }
                 
+                // Convert velocity if needed
+                let velocityValue = marker.velocityFps;
+                let velocityUnit = 'fps';
+                if (useMetersPerSec) {
+                    velocityValue = marker.velocityFps * 0.3048;
+                    velocityUnit = 'm/s';
+                }
+                
                 tooltip.innerHTML = `
                     <strong>${marker.distance}m</strong><br>
                     高度: ${marker.height.toFixed(1)}m<br>
-                    速度: ${marker.velocityFps.toFixed(0)} fps<br>
+                    速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
                     エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
                 `;
                 
@@ -632,8 +649,15 @@ canvas.addEventListener('mousemove', function(e) {
     // Show tooltip if close enough to trajectory
     if (closestPoint && minDistance < 10) {
         const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-        const velocityFps = velocity / 0.3048;
         const energy = calculator.calculateEnergy(currentMass, velocity);
+        
+        // Convert velocity if needed
+        let velocityValue = velocity;
+        let velocityUnit = 'm/s';
+        if (!useMetersPerSec) {
+            velocityValue = velocity / 0.3048;
+            velocityUnit = 'fps';
+        }
         
         // Convert energy if needed
         let energyValue = energy;
@@ -646,7 +670,7 @@ canvas.addEventListener('mousemove', function(e) {
         tooltip.innerHTML = `
             距離: ${closestPoint.x.toFixed(1)}m<br>
             高度: ${closestPoint.y.toFixed(1)}m<br>
-            速度: ${velocityFps.toFixed(0)} fps<br>
+            速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
             エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
         `;
         
