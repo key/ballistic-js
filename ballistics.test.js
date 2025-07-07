@@ -14,9 +14,11 @@ describe('BallisticsCalculator', () => {
         angle: 6,
         initialHeight: 1.6,
         mass: 0.032, // 32g in kg
-        dragCoeff: 0.47,
+        bc: 0.400,  // Ballistic coefficient
+        dragModel: 'G1',
         diameter: 0.0173, // 17.3mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);
@@ -36,9 +38,11 @@ describe('BallisticsCalculator', () => {
         angle: 0,
         initialHeight: 2,
         mass: 0.01,
-        dragCoeff: 0.47,
+        bc: 0.300,  // Ballistic coefficient
+        dragModel: 'G1',
         diameter: 0.0113, // 11.3mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);
@@ -90,9 +94,11 @@ describe('BallisticsCalculator', () => {
         angle: 45,
         initialHeight: 0,
         mass: 0.01,
-        dragCoeff: 0.47,
+        bc: 0.300,  // Ballistic coefficient
+        dragModel: 'G1',
         diameter: 0.0113, // 11.3mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);
@@ -114,9 +120,11 @@ describe('BallisticsCalculator', () => {
         angle: 30,
         initialHeight: 0,
         mass: 0.032,
-        dragCoeff: 0.47,
+        bc: 0.400,  // Ballistic coefficient
+        dragModel: 'G1',
         diameter: 0.0173, // 17.3mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);
@@ -138,9 +146,11 @@ describe('BallisticsCalculator', () => {
         angle: 45,
         initialHeight: 0,
         mass: 0.01,
-        dragCoeff: 2.0, // Very high drag
+        bc: 0.100,  // Very low BC (high drag)
+        dragModel: 'G1',
         diameter: 0.0357, // 35.7mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);
@@ -155,9 +165,11 @@ describe('BallisticsCalculator', () => {
         angle: 90,
         initialHeight: 0,
         mass: 0.01,
-        dragCoeff: 0.47,
+        bc: 0.300,  // Ballistic coefficient
+        dragModel: 'G1',
         diameter: 0.0113, // 11.3mm in m
-        airDensity: 1.225
+        airDensity: 1.225,
+        soundSpeed: 340.3  // Standard speed of sound
       };
 
       const result = calculator.calculateTrajectory(params);

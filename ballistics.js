@@ -4,6 +4,10 @@ class BallisticsCalculator {
         this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
         this.maxSimTime = 1000; // Maximum simulation time (s)
         this.piHalf = Math.PI / 2; // Pre-calculated constant
+        // Use DragFunctionCalculator from global scope in browser or require in Node.js
+        this.dragCalculator = typeof window !== 'undefined' 
+            ? new window.DragFunctionCalculator() 
+            : new (require('./dragFunctions.js').DragFunctionCalculator)();
     }
 
     calculateTrajectory(params) {
@@ -12,9 +16,11 @@ class BallisticsCalculator {
             angle,
             initialHeight = 0,
             mass,
-            dragCoeff,
+            bc,  // Ballistic coefficient
+            dragModel = 'G1',  // Drag model (G1-G8)
             diameter,
             airDensity,
+            soundSpeed,  // Speed of sound for Mach number calculation
             windSpeed = 0,
             windAngle = 0
         } = params;
@@ -46,6 +52,9 @@ class BallisticsCalculator {
             const vRelX = vx - windVx;
             const vRelY = vy - windVy;
             const vRel = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
+            
+            // Get drag coefficient based on current velocity and drag model
+            const dragCoeff = this.dragCalculator.getDragCoefficientAtVelocity(bc, dragModel, vRel, soundSpeed);
             
             const dragForce = 0.5 * dragCoeff * airDensity * area * vRel * vRel;
             const dragAx = -(dragForce / mass) * (vRelX / vRel);
@@ -100,3 +109,6 @@ class BallisticsCalculator {
         return mass * velocity;
     }
 }
+
+// Make available globally
+window.BallisticsCalculator = BallisticsCalculator;

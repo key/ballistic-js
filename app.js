@@ -1,3 +1,4 @@
+// Wait for BallisticsCalculator to be available
 const calculator = new BallisticsCalculator();
 let chart = null;
 let currentTrajectoryData = null;
@@ -208,9 +209,11 @@ function getInputValues() {
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
         scopeHeight: parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M, // Convert mm to m
         mass: massValue,
-        dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
+        bc: parseFloat(document.getElementById('dragCoeff').value),  // Using dragCoeff input for BC
+        dragModel: document.getElementById('dragModel').value,
         diameter: parseFloat(document.getElementById('diameter').value) * MM_TO_M, // Convert mm to m
         airDensity: airDensity,
+        soundSpeed: parseFloat(document.getElementById('soundSpeed').textContent),
         windSpeed: parseFloat(document.getElementById('windSpeed').value),
         windAngle: parseFloat(document.getElementById('windAngle').value)
     };
