@@ -1,8 +1,12 @@
+// Import drag function calculator
+const { DragFunctionCalculator } = require('./dragFunctions.js');
+
 class BallisticsCalculator {
     constructor() {
         this.g = 9.81; // gravity (m/s²)
         this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
         this.maxSimTime = 1000; // Maximum simulation time (s)
+        this.dragCalculator = new DragFunctionCalculator();
     }
 
     calculateTrajectory(params) {
@@ -11,9 +15,11 @@ class BallisticsCalculator {
             angle,
             initialHeight = 0,
             mass,
-            dragCoeff,
+            bc,  // Ballistic coefficient
+            dragModel = 'G1',  // Drag model (G1-G8)
             diameter,
-            airDensity
+            airDensity,
+            soundSpeed  // Speed of sound for Mach number calculation
         } = params;
         
         // Calculate area from diameter (diameter in m, area in m²)
@@ -34,6 +40,9 @@ class BallisticsCalculator {
             trajectory.push({ x, y, t, vx, vy });
 
             const v = Math.sqrt(vx * vx + vy * vy);
+            // Get drag coefficient based on current velocity and drag model
+            const dragCoeff = this.dragCalculator.getDragCoefficientAtVelocity(bc, dragModel, v, soundSpeed);
+            
             const dragForce = 0.5 * dragCoeff * airDensity * area * v * v;
             const dragAx = -(dragForce / mass) * (vx / v);
             const dragAy = -(dragForce / mass) * (vy / v);

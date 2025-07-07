@@ -57,8 +57,20 @@
                     </div>
                     
                     <div class="input-group">
-                        <label for="dragCoeff">抗力係数:</label>
-                        <input type="number" id="dragCoeff" value="0.0865" step="0.0001">
+                        <label for="dragModel">抗力モデル:</label>
+                        <select id="dragModel">
+                            <option value="G1" selected>G1 (Standard)</option>
+                            <option value="G2">G2 (Aberdeen J)</option>
+                            <option value="G5">G5 (Short boat tail)</option>
+                            <option value="G6">G6 (Flat base spitzer)</option>
+                            <option value="G7">G7 (Long boat tail)</option>
+                            <option value="G8">G8 (Flat base)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="dragCoeff">弾道係数 (BC):</label>
+                        <input type="number" id="dragCoeff" value="0.400" step="0.001">
                     </div>
                     
                     <div class="input-group">
@@ -189,7 +201,8 @@
         </div>
     </footer>
     
-    <script src="ballistics.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="dragFunctions.js"></script>
+    <script type="module" src="ballistics.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
