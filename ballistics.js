@@ -1,13 +1,13 @@
-// Import drag function calculator
-import { DragFunctionCalculator } from './dragFunctions.js';
-
 class BallisticsCalculator {
     constructor() {
         this.g = 9.81; // gravity (m/s²)
         this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
         this.maxSimTime = 1000; // Maximum simulation time (s)
         this.piHalf = Math.PI / 2; // Pre-calculated constant
-        this.dragCalculator = new DragFunctionCalculator();
+        // Use DragFunctionCalculator from global scope in browser or require in Node.js
+        this.dragCalculator = typeof window !== 'undefined' 
+            ? new window.DragFunctionCalculator() 
+            : new (require('./dragFunctions.js').DragFunctionCalculator)();
     }
 
     calculateTrajectory(params) {
@@ -110,5 +110,5 @@ class BallisticsCalculator {
     }
 }
 
-// Export for ES6 modules
-export default BallisticsCalculator;
+// Make available globally
+window.BallisticsCalculator = BallisticsCalculator;

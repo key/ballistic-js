@@ -1,5 +1,4 @@
-import BallisticsCalculator from './ballistics.js';
-
+// Wait for BallisticsCalculator to be available
 const calculator = new BallisticsCalculator();
 let chart = null;
 let currentTrajectoryData = null;

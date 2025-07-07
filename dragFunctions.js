@@ -214,8 +214,12 @@ class DragFunctionCalculator {
     }
 }
 
-// Export for ES6 modules
-export { DragFunctionCalculator, DRAG_FUNCTIONS, REFERENCE_DRAG_COEFFICIENTS };
+// Export for browser environment
+if (typeof window !== 'undefined') {
+    window.DragFunctionCalculator = DragFunctionCalculator;
+    window.DRAG_FUNCTIONS = DRAG_FUNCTIONS;
+    window.REFERENCE_DRAG_COEFFICIENTS = REFERENCE_DRAG_COEFFICIENTS;
+}
 
 // Export for CommonJS (Node.js)
 if (typeof module !== 'undefined' && module.exports) {
