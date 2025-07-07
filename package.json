@@ -20,10 +20,13 @@
   "author": "ballistic-js contributors",
   "license": "MIT",
   "devDependencies": {
-    "jest": "^30.0.3",
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
     "babel-jest": "^30.0.2",
+    "jest": "^30.0.3",
     "markdownlint-cli2": "^0.18.1"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.43"
   }
 }
