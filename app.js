@@ -4,33 +4,39 @@ let currentTrajectoryData = null;
 let currentMass = null;
 let chartScales = null;
 
-document.getElementById('calculate').addEventListener('click', calculate);
-document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('calculate').addEventListener('click', calculate);
+    document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
 
-// Add event listeners for environment inputs
-const envInputs = ['temperature', 'pressure', 'humidity', 'altitude'];
-envInputs.forEach(id => {
-    document.getElementById(id).addEventListener('input', updateCalculatedValues);
-});
+    // Add event listeners for environment inputs
+    const envInputs = ['temperature', 'pressure', 'humidity', 'altitude'];
+    envInputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCalculatedValues);
+    });
 
-// Initial calculation of air density
-updateCalculatedValues();
+    // Remove automatic calculation on zero-in distance change
+    // Calculation will happen when "計算" button is clicked
 
-// Tab functionality
-const tabButtons = document.querySelectorAll('.tab-button');
-const tabPanels = document.querySelectorAll('.tab-panel');
+    // Initial calculation of air density
+    updateCalculatedValues();
 
-tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const targetTab = button.getAttribute('data-tab');
-        
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-        
-        // Add active class to clicked button and corresponding panel
-        button.classList.add('active');
-        document.getElementById(targetTab).classList.add('active');
+    // Tab functionality
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanels.forEach(panel => panel.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding panel
+            button.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+        });
     });
 });
 
@@ -41,6 +47,7 @@ function getInputValues() {
         velocity: parseFloat(document.getElementById('velocity').value) * 0.3048, // Convert fps to m/s
         angle: parseFloat(document.getElementById('angle').value),
         initialHeight: parseFloat(document.getElementById('initialHeight').value),
+        scopeHeight: parseFloat(document.getElementById('scopeHeight').value) / 1000, // Convert mm to m
         mass: parseFloat(document.getElementById('mass').value) / 1000, // Convert grams to kg
         dragCoeff: parseFloat(document.getElementById('dragCoeff').value),
         diameter: parseFloat(document.getElementById('diameter').value) / 1000, // Convert mm to m
@@ -51,6 +58,13 @@ function getInputValues() {
 }
 
 function calculate() {
+    // Check if zero-in distance is selected and calculate angle if needed
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (zeroDistance) {
+        calculateZeroAngle();
+        // Get parameters after angle calculation
+    }
+    
     const params = getInputValues();
     
     const withDrag = calculator.calculateTrajectory(params);
@@ -203,6 +217,48 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     });
     ctx.stroke();
     
+    // Draw scope height line
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const totalScopeHeight = initialHeight + scopeHeight;
+    
+    ctx.strokeStyle = '#4444ff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([10, 5]); // Dashed line
+    ctx.beginPath();
+    const scopeY = canvas.height - margin - totalScopeHeight * scaleY;
+    ctx.moveTo(margin, scopeY);
+    ctx.lineTo(canvas.width - margin, scopeY);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset to solid line
+    
+    // Add label for scope height
+    ctx.fillStyle = '#4444ff';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`スコープハイト: ${totalScopeHeight.toFixed(3)}m`, margin + 5, scopeY - 5);
+    
+    // Draw zero-in distance marker if selected
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (zeroDistance) {
+        const zeroX = margin + zeroDistance * scaleX;
+        if (zeroX <= canvas.width - margin) {
+            ctx.strokeStyle = '#00aa00';  // Darker green
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(zeroX, margin);
+            ctx.lineTo(zeroX, canvas.height - margin);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Add label
+            ctx.fillStyle = '#00aa00';  // Darker green
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`ゼロイン: ${zeroDistance}m`, zeroX, margin - 5);
+        }
+    }
     
     ctx.fillStyle = '#333';
     ctx.font = '12px Arial';
@@ -235,15 +291,9 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.textAlign = 'left';
     ctx.fillText('距離 (m)', canvas.width / 2 - 30, canvas.height - 10);
     
-    ctx.fillStyle = '#ff4444';
-    ctx.fillRect(canvas.width - 150, 20, 15, 15);
-    ctx.fillStyle = '#333';
-    ctx.fillText('空気抵抗あり', canvas.width - 130, 32);
-    
-    // Display velocity and energy at specific distances
+    // Store distance marker data for mouse interaction
+    const distanceMarkers = [];
     const distances = [50, 100, 150, 200, 300];
-    ctx.fillStyle = '#333';
-    ctx.font = '11px Arial';
     
     distances.forEach(distance => {
         // Find the trajectory point closest to this distance
@@ -267,32 +317,130 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             const px = margin + distance * scaleX;
             const py = canvas.height - margin - closestPoint.y * scaleY;
             
-            // Draw vertical line at this distance
-            ctx.strokeStyle = '#999';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
+            // Store marker data for interaction
+            distanceMarkers.push({
+                distance: distance,
+                x: px,
+                y: py,
+                height: closestPoint.y,
+                velocityFps: velocityFps,
+                energy: energy
+            });
+            
+            // Draw small circle marker
+            ctx.fillStyle = '#666';
             ctx.beginPath();
-            ctx.moveTo(px, margin);
-            ctx.lineTo(px, canvas.height - margin);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw data box
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(px - 40, py - 55, 80, 58);
-            
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(px - 40, py - 55, 80, 58);
-            
-            ctx.fillStyle = '#333';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${distance}m`, px, py - 43);
-            ctx.fillText(`${closestPoint.y.toFixed(1)}m`, px, py - 30);
-            ctx.fillText(`${velocityFps.toFixed(0)} fps`, px, py - 17);
-            ctx.fillText(`${energy.toFixed(0)} J`, px, py - 4);
+            ctx.arc(px, py, 4, 0, 2 * Math.PI);
+            ctx.fill();
         }
     });
+    
+    // Store markers for mouse/touch interaction
+    chartScales.distanceMarkers = distanceMarkers;
+}
+
+function calculateZeroAngle() {
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (!zeroDistance) {
+        return; // No zero distance selected
+    }
+    
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) / 1000; // Convert mm to m
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const targetHeight = initialHeight + scopeHeight; // Target height = barrel height + scope height
+    
+    // Get current parameters
+    const params = getInputValues();
+    
+    // Use binary search to find the angle that gives us the zero distance
+    let lowAngle = 0;      // Start from 0 degrees
+    let highAngle = 0.01;  // Start with 0.01 degrees for first zero
+    let bestAngle = 0;
+    let bestDistanceDiff = Infinity;  // Track best distance difference
+    let iterations = 0;
+    const maxIterations = 100;  // More iterations for better precision
+    const tolerance = 0.5; // 0.5m tolerance for distance
+    
+    while (iterations < maxIterations && (highAngle - lowAngle) > 0.0001) {  // Better precision
+        const midAngle = (lowAngle + highAngle) / 2;
+        
+        // Calculate trajectory with this angle
+        const testParams = {...params, angle: midAngle};
+        const trajectory = calculator.calculateTrajectory(testParams);
+        
+        // Check if trajectory is valid
+        if (!trajectory || !trajectory.trajectory) {
+            continue;
+        }
+        
+        const trajectoryPoints = trajectory.trajectory;
+        
+        // Find first crossing point with scope height (first zero)
+        let firstZeroDistance = null;
+        let crossingHeight = null;
+        
+        // First, find where trajectory crosses scope height line
+        for (let i = 1; i < trajectoryPoints.length; i++) {
+            const prevHeight = trajectoryPoints[i-1].y;
+            const currHeight = trajectoryPoints[i].y;
+            
+            // Check if trajectory crosses the target height between these two points
+            if ((prevHeight <= targetHeight && currHeight >= targetHeight) || 
+                (prevHeight >= targetHeight && currHeight <= targetHeight)) {
+                // Interpolate to find exact crossing distance
+                const ratio = (targetHeight - prevHeight) / (currHeight - prevHeight);
+                firstZeroDistance = trajectoryPoints[i-1].x + ratio * (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
+                
+                // Only consider this if it's ascending (first zero)
+                if (trajectoryPoints[i].vy > 0 || (trajectoryPoints[i].vy === 0 && trajectoryPoints[i-1].vy > 0)) {
+                    break;
+                }
+            }
+        }
+        
+        // Now check the height at the target distance
+        for (let i = 1; i < trajectoryPoints.length; i++) {
+            if (trajectoryPoints[i].x >= zeroDistance) {
+                const ratio = (zeroDistance - trajectoryPoints[i-1].x) / (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
+                crossingHeight = trajectoryPoints[i-1].y + ratio * (trajectoryPoints[i].y - trajectoryPoints[i-1].y);
+                break;
+            }
+        }
+        
+        // If we have the height at target distance, use it for binary search
+        if (crossingHeight !== null) {
+            const heightDiff = crossingHeight - targetHeight;
+            
+            // Keep track of best angle
+            if (Math.abs(heightDiff) < Math.abs(bestDistanceDiff)) {
+                bestAngle = midAngle;
+                bestDistanceDiff = heightDiff;
+            }
+            
+            if (Math.abs(heightDiff) < 0.001) { // 1mm tolerance
+                break;
+            } else if (heightDiff < 0) {
+                // Shooting too low, increase angle
+                lowAngle = midAngle;
+                
+                // If we're at the high end and still too low, expand the range
+                if (midAngle > highAngle * 0.9 && iterations < 20) {
+                    highAngle *= 2;
+                }
+            } else {
+                // Shooting too high, decrease angle
+                highAngle = midAngle;
+            }
+        } else {
+            // Trajectory doesn't reach target distance
+            lowAngle = midAngle;
+        }
+        
+        iterations++;
+    }
+    
+    // Set the calculated angle
+    document.getElementById('angle').value = bestAngle.toFixed(3);
 }
 
 function downloadCSV() {
@@ -360,6 +508,26 @@ canvas.addEventListener('mousemove', function(e) {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    // Check if near a distance marker first
+    if (chartScales.distanceMarkers) {
+        for (let marker of chartScales.distanceMarkers) {
+            const markerDist = Math.sqrt(Math.pow(mouseX - marker.x, 2) + Math.pow(mouseY - marker.y, 2));
+            if (markerDist < 15) { // Within 15 pixels of marker
+                tooltip.innerHTML = `
+                    <strong>${marker.distance}m</strong><br>
+                    高度: ${marker.height.toFixed(1)}m<br>
+                    速度: ${marker.velocityFps.toFixed(0)} fps<br>
+                    エネルギー: ${marker.energy.toFixed(0)} J
+                `;
+                
+                tooltip.style.left = (mouseX + 10) + 'px';
+                tooltip.style.top = (mouseY - 60) + 'px';
+                tooltip.style.display = 'block';
+                return;
+            }
+        }
+    }
+    
     // Convert mouse position to chart coordinates
     const chartX = (mouseX - chartScales.margin) / chartScales.scaleX;
     const chartY = (canvas.height - mouseY - chartScales.margin) / chartScales.scaleY;
@@ -389,8 +557,8 @@ canvas.addEventListener('mousemove', function(e) {
             エネルギー: ${energy.toFixed(0)} J
         `;
         
-        tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
-        tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+        tooltip.style.left = (mouseX + 10) + 'px';
+        tooltip.style.top = (mouseY - 40) + 'px';
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
@@ -398,6 +566,31 @@ canvas.addEventListener('mousemove', function(e) {
 });
 
 canvas.addEventListener('mouseleave', function() {
+    tooltip.style.display = 'none';
+});
+
+// Touch support for mobile devices
+canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchend', function() {
     tooltip.style.display = 'none';
 });
 
@@ -453,4 +646,5 @@ function updateCalculatedValues() {
     document.getElementById('soundSpeed').textContent = soundSpeed.toFixed(1);
 }
 
+// Initial calculation with default zero-in distance
 calculate();
