@@ -218,8 +218,8 @@ button:hover {
 .unit-switch {
     position: relative;
     display: inline-block;
-    width: 40px;
-    height: 22px;
+    width: 36px;
+    height: 20px;
     margin: 0 6px;
 }
 
@@ -238,16 +238,16 @@ button:hover {
     bottom: 0;
     background-color: #ccc;
     transition: .4s;
-    border-radius: 24px;
+    border-radius: 20px;
 }
 
 .unit-slider:before {
     position: absolute;
     content: "";
-    height: 14px;
-    width: 14px;
-    left: 4px;
-    bottom: 4px;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
     background-color: white;
     transition: .4s;
     border-radius: 50%;
@@ -272,11 +272,11 @@ input:checked + .unit-slider:before {
     margin: 15px 0;
 }
 
-.input-group label {
+.input-group > label {
     flex: 0 0 200px;
 }
 
-.input-group input[type="number"],
-.input-group select {
+.input-group > input[type="number"],
+.input-group > select {
     flex: 0 0 150px;
 }
