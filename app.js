@@ -243,7 +243,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     if (zeroDistance) {
         const zeroX = margin + zeroDistance * scaleX;
         if (zeroX <= canvas.width - margin) {
-            ctx.strokeStyle = '#44ff44';
+            ctx.strokeStyle = '#00aa00';  // Darker green
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -253,7 +253,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             ctx.setLineDash([]);
             
             // Add label
-            ctx.fillStyle = '#44ff44';
+            ctx.fillStyle = '#00aa00';  // Darker green
             ctx.font = '10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`ゼロイン: ${zeroDistance}m`, zeroX, margin - 5);
