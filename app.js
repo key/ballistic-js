@@ -291,11 +291,6 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.textAlign = 'left';
     ctx.fillText('距離 (m)', canvas.width / 2 - 30, canvas.height - 10);
     
-    ctx.fillStyle = '#ff4444';
-    ctx.fillRect(canvas.width - 150, 20, 15, 15);
-    ctx.fillStyle = '#333';
-    ctx.fillText('空気抵抗あり', canvas.width - 130, 32);
-    
     // Store distance marker data for mouse interaction
     const distanceMarkers = [];
     const distances = [50, 100, 150, 200, 300];
