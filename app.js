@@ -498,7 +498,8 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 velocityFps: velocityFps,
                 energy: energy,
                 energyInJoules: energy,  // Always store in joules for conversion
-                scopeHeight: totalScopeHeight  // Store scope height for zero deviation calculation
+                scopeHeight: totalScopeHeight,  // Store scope height for zero deviation calculation
+                time: closestPoint.t  // Store time in seconds
             });
             
             // Draw small circle marker
@@ -508,6 +509,45 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             ctx.fill();
         }
     });
+    
+    // Find subsonic threshold (where velocity drops below sound speed)
+    const soundSpeed = calculateSoundSpeed(parseFloat(document.getElementById('temperature').value));
+    let subsonicDistance = null;
+    
+    for (let i = 1; i < trajectoryData.length; i++) {
+        const velocity = Math.sqrt(trajectoryData[i].vx * trajectoryData[i].vx + trajectoryData[i].vy * trajectoryData[i].vy);
+        if (velocity < soundSpeed && trajectoryData[i-1]) {
+            const prevVelocity = Math.sqrt(trajectoryData[i-1].vx * trajectoryData[i-1].vx + trajectoryData[i-1].vy * trajectoryData[i-1].vy);
+            if (prevVelocity >= soundSpeed) {
+                // Interpolate to find exact crossing point
+                const ratio = (soundSpeed - prevVelocity) / (velocity - prevVelocity);
+                subsonicDistance = trajectoryData[i-1].x + ratio * (trajectoryData[i].x - trajectoryData[i-1].x);
+                break;
+            }
+        }
+    }
+    
+    // Draw subsonic threshold line if found
+    if (subsonicDistance !== null && subsonicDistance <= maxX) {
+        const subsonicX = margin + subsonicDistance * scaleX;
+        ctx.strokeStyle = '#ff8800';  // Orange color
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.moveTo(subsonicX, margin);
+        ctx.lineTo(subsonicX, canvas.height - margin);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Add label
+        ctx.fillStyle = '#ff8800';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.save();
+        ctx.translate(subsonicX, margin - 5);
+        ctx.fillText(`亜音速: ${subsonicDistance.toFixed(0)}m`, 0, 0);
+        ctx.restore();
+    }
     
     // Store markers for mouse/touch interaction
     chartScales.distanceMarkers = distanceMarkers;
@@ -709,6 +749,7 @@ canvas.addEventListener('mousemove', function(e) {
                 
                 tooltip.innerHTML = `
                     <strong>${marker.distance}m</strong><br>
+                    時間: ${marker.time.toFixed(2)}秒<br>
                     高度: ${marker.height.toFixed(1)}m<br>
                     ゼロ偏差: ${deviationSign}${zeroDeviation.toFixed(0)}mm<br>
                     速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
@@ -763,6 +804,7 @@ canvas.addEventListener('mousemove', function(e) {
         
         tooltip.innerHTML = `
             距離: ${closestPoint.x.toFixed(1)}m<br>
+            時間: ${closestPoint.t.toFixed(2)}秒<br>
             高度: ${closestPoint.y.toFixed(1)}m<br>
             速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
             エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
