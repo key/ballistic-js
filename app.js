@@ -33,26 +33,39 @@ function loadUnitPreferences() {
     const velocityUnit = getCookie('velocityUnit');
     const energyUnit = getCookie('energyUnit');
     
+    // Load mass unit preference
+    const massInput = document.getElementById('mass');
+    const defaultMassValue = parseFloat(massInput.getAttribute('data-default-value') || massInput.value);
+    
     if (massUnit === 'grains') {
         useGrains = true;
         document.getElementById('massUnitToggle').checked = true;
         document.getElementById('massUnit').textContent = 'gr';
         // Convert default value to grains
-        const massInput = document.getElementById('mass');
-        massInput.value = (parseFloat(massInput.value) * 15.4324).toFixed(1);
+        massInput.value = (defaultMassValue * 15.4324).toFixed(1);
         massInput.step = "1";
+    } else {
+        // Default is grams
+        massInput.value = defaultMassValue;
     }
+    
+    // Load velocity unit preference
+    const velocityInput = document.getElementById('velocity');
+    const defaultVelocityValue = parseFloat(velocityInput.getAttribute('data-default-value') || velocityInput.value);
     
     if (velocityUnit === 'mps') {
         useMetersPerSec = true;
         document.getElementById('velocityUnitToggle').checked = true;
         document.getElementById('velocityUnit').textContent = 'm/s';
         // Convert default value to m/s
-        const velocityInput = document.getElementById('velocity');
-        velocityInput.value = (parseFloat(velocityInput.value) * 0.3048).toFixed(1);
+        velocityInput.value = (defaultVelocityValue * 0.3048).toFixed(1);
         velocityInput.step = "1";
+    } else {
+        // Default is fps
+        velocityInput.value = defaultVelocityValue;
     }
     
+    // Load energy unit preference
     if (energyUnit === 'ftlbs') {
         useFootPounds = true;
         document.getElementById('energyUnitToggle').checked = true;
@@ -675,6 +688,7 @@ canvas.addEventListener('mousemove', function(e) {
                     エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
                 `;
                 
+                tooltip.className = 'tooltip marker-tooltip';
                 tooltip.style.left = (mouseX + 10) + 'px';
                 tooltip.style.top = (mouseY - 60) + 'px';
                 tooltip.style.display = 'block';
@@ -727,6 +741,7 @@ canvas.addEventListener('mousemove', function(e) {
             エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
         `;
         
+        tooltip.className = 'tooltip';
         tooltip.style.left = (mouseX + 10) + 'px';
         tooltip.style.top = (mouseY - 40) + 'px';
         tooltip.style.display = 'block';

@@ -295,3 +295,14 @@ input:checked + .unit-slider:before {
 .section-header .unit-toggle {
     margin-left: 0;
 }
+
+/* Tooltip styles */
+.tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+.tooltip.marker-tooltip {
+    background: rgba(0, 102, 204, 0.9);
+    border: 1px solid rgba(0, 153, 255, 0.8);
+}
