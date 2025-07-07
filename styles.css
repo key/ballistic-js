@@ -258,7 +258,7 @@ input:checked + .unit-slider {
 }
 
 input:checked + .unit-slider:before {
-    transform: translateX(18px);
+    transform: translateX(16px);
 }
 
 .unit-label {
