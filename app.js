@@ -646,4 +646,5 @@ function updateCalculatedValues() {
     document.getElementById('soundSpeed').textContent = soundSpeed.toFixed(1);
 }
 
+// Initial calculation with default zero-in distance
 calculate();
