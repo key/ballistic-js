@@ -603,10 +603,11 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                         color: '#ff44ff',
                         callback: function(value) {
                             return (value >= 0 ? '+' : '') + value;
-                        }
+                        },
+                        stepSize: 50
                     },
-                    min: -500,
-                    max: 50
+                    min: -500,  // Fixed minimum at -500mm
+                    grace: '10%'  // Add 10% padding to the scale for max
                 }
             }
         }
