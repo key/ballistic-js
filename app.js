@@ -306,11 +306,29 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const margin = 40;
-    const plotWidth = canvas.width - 2 * margin;
+    const rightMargin = 60; // Extra margin for right Y-axis
+    const plotWidth = canvas.width - margin - rightMargin;
     const plotHeight = canvas.height - 2 * margin;
     
     const maxX = Math.max(...trajectoryData.map(p => p.x)) * 1.1;
     const maxY = Math.max(...trajectoryData.map(p => p.y)) * 1.1;
+    
+    // Calculate additional data ranges
+    const velocities = trajectoryData.map(p => Math.sqrt(p.vx * p.vx + p.vy * p.vy));
+    const energies = trajectoryData.map(p => {
+        const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        return calculator.calculateEnergy(mass, v);
+    });
+    
+    const maxVelocity = Math.max(...velocities) * 1.1;
+    const maxEnergy = Math.max(...energies) * 1.1;
+    
+    // Get zero-in parameters for deviation calculation
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M;
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const zeroInHeight = initialHeight + scopeHeight;
+    const deviations = trajectoryData.map(p => (p.y - zeroInHeight) * M_TO_MM); // Convert to mm
+    const maxDeviation = Math.max(...deviations.map(Math.abs)) * 1.1;
     
     const scaleX = plotWidth / maxX;
     const scaleY = plotHeight / maxY;
@@ -329,7 +347,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     for (let distance = 0; distance <= maxX; distance += 25) {
         const x = margin + distance * scaleX;
         
-        if (x > margin && x < canvas.width - margin) {
+        if (x > margin && x < canvas.width - rightMargin) {
             ctx.strokeStyle = '#ddd';
             if (distance % 50 === 0) {
                 // Solid line for 50m intervals
@@ -356,7 +374,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         if (y > margin && y < canvas.height - margin) {
             ctx.beginPath();
             ctx.moveTo(margin, y);
-            ctx.lineTo(canvas.width - margin, y);
+            ctx.lineTo(canvas.width - rightMargin, y);
             ctx.stroke();
         }
     }
@@ -368,15 +386,22 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     // Draw horizontal axis (x-axis)
     ctx.beginPath();
     ctx.moveTo(margin, canvas.height - margin);
-    ctx.lineTo(canvas.width - margin, canvas.height - margin);
+    ctx.lineTo(canvas.width - rightMargin, canvas.height - margin);
     ctx.stroke();
     
-    // Draw vertical axis (y-axis)
+    // Draw left vertical axis (y-axis)
     ctx.beginPath();
     ctx.moveTo(margin, margin);
     ctx.lineTo(margin, canvas.height - margin);
     ctx.stroke();
     
+    // Draw right vertical axis
+    ctx.beginPath();
+    ctx.moveTo(canvas.width - rightMargin, margin);
+    ctx.lineTo(canvas.width - rightMargin, canvas.height - margin);
+    ctx.stroke();
+    
+    // Draw trajectory line
     ctx.strokeStyle = '#ff4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -392,6 +417,74 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     });
     ctx.stroke();
     
+    // Calculate scales for additional data
+    const scaleVelocity = plotHeight / maxVelocity;
+    const scaleEnergy = plotHeight / maxEnergy;
+    const scaleDeviation = plotHeight / (2 * maxDeviation); // Scale for both positive and negative
+    
+    // Draw velocity line
+    ctx.strokeStyle = '#4444ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    trajectoryData.forEach((point, index) => {
+        const x = margin + point.x * scaleX;
+        const velocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
+        const y = canvas.height - margin - velocity * scaleVelocity;
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // Draw energy line
+    ctx.strokeStyle = '#44ff44';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    trajectoryData.forEach((point, index) => {
+        const x = margin + point.x * scaleX;
+        const velocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
+        const energy = calculator.calculateEnergy(mass, velocity);
+        const y = canvas.height - margin - energy * scaleEnergy;
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // Draw deviation line (centered at middle of chart)
+    ctx.strokeStyle = '#ff44ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const centerY = canvas.height / 2;
+    trajectoryData.forEach((point, index) => {
+        const x = margin + point.x * scaleX;
+        const deviation = (point.y - zeroInHeight) * M_TO_MM;
+        const y = centerY - deviation * scaleDeviation;
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // Draw zero line for deviation
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(margin, centerY);
+    ctx.lineTo(canvas.width - rightMargin, centerY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
     // Draw scope height line
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
     const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
@@ -403,7 +496,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.beginPath();
     const scopeY = canvas.height - margin - totalScopeHeight * scaleY;
     ctx.moveTo(margin, scopeY);
-    ctx.lineTo(canvas.width - margin, scopeY);
+    ctx.lineTo(canvas.width - rightMargin, scopeY);
     ctx.stroke();
     ctx.setLineDash([]); // Reset to solid line
     
@@ -417,7 +510,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
     if (zeroDistance) {
         const zeroX = margin + zeroDistance * scaleX;
-        if (zeroX <= canvas.width - margin) {
+        if (zeroX <= canvas.width - rightMargin) {
             ctx.strokeStyle = '#00aa00';  // Darker green
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
@@ -442,13 +535,14 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     // X-axis labels (distance) - every 50m
     for (let distance = 0; distance <= maxX; distance += 50) {
         const x = margin + distance * scaleX;
-        if (x >= margin && x <= canvas.width - margin) {
+        if (x >= margin && x <= canvas.width - rightMargin) {
             ctx.fillText(distance + 'm', x, canvas.height - margin + 20);
         }
     }
     
-    // Y-axis labels (height) - every 5m
+    // Left Y-axis labels (height) - every 5m
     ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff4444';  // Red for trajectory
     for (let height = 0; height <= maxY; height += 5) {
         const y = canvas.height - margin - height * scaleY;
         if (y >= margin && y <= canvas.height - margin) {
@@ -456,15 +550,116 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         }
     }
     
+    // Right Y-axis labels (velocity/energy)
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#4444ff';  // Blue for velocity
+    const velocityStep = maxVelocity / 5;
+    for (let i = 0; i <= 5; i++) {
+        const velocity = i * velocityStep;
+        const y = canvas.height - margin - velocity * scaleVelocity;
+        if (y >= margin && y <= canvas.height - margin) {
+            ctx.fillText(velocity.toFixed(0) + ' m/s', canvas.width - rightMargin + 5, y + 5);
+        }
+    }
+    
+    // Energy scale labels (using same positions as velocity)
+    ctx.fillStyle = '#44ff44';  // Green for energy
+    const energyStep = maxEnergy / 5;
+    for (let i = 0; i <= 5; i++) {
+        const energy = i * energyStep;
+        const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
+        const y = canvas.height - margin - energy * scaleEnergy;
+        if (y >= margin && y <= canvas.height - margin) {
+            ctx.fillText(displayEnergy.toFixed(0), canvas.width - rightMargin + 60, y + 5);
+        }
+    }
+    
+    // Deviation labels (center-aligned)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff44ff';  // Magenta for deviation
+    const deviationStep = maxDeviation / 2;
+    for (let i = -2; i <= 2; i++) {
+        const deviation = i * deviationStep;
+        const y = centerY - deviation * scaleDeviation;
+        if (y >= margin && y <= canvas.height - margin) {
+            ctx.fillText((i === 0 ? '±' : (deviation > 0 ? '+' : '')) + deviation.toFixed(0) + 'mm', margin - 40, y + 5);
+        }
+    }
+    
+    // Y-axis titles
     ctx.save();
     ctx.translate(margin - 30, canvas.height / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
-    ctx.fillText('高度 (m)', 0, 0);
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText('高度 (m)', 0, -20);
+    ctx.fillStyle = '#ff44ff';
+    ctx.fillText('偏差 (mm)', 0, 20);
     ctx.restore();
     
+    ctx.save();
+    ctx.translate(canvas.width - rightMargin + 50, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#4444ff';
+    ctx.fillText('速度 (m/s)', 0, -20);
+    ctx.fillStyle = '#44ff44';
+    const energyUnit = useFootPounds ? 'ft-lbf' : 'J';
+    ctx.fillText(`エネルギー (${energyUnit})`, 0, 20);
+    ctx.restore();
+    
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#333';
+    ctx.fillText('距離 (m)', canvas.width / 2, canvas.height - 10);
+    
+    // Draw legend
+    const legendX = canvas.width - rightMargin - 150;
+    const legendY = margin + 10;
+    const legendLineLength = 30;
+    const legendSpacing = 20;
+    
+    ctx.font = '11px Arial';
+    
+    // Trajectory legend
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(legendX, legendY);
+    ctx.lineTo(legendX + legendLineLength, legendY);
+    ctx.stroke();
+    ctx.fillStyle = '#ff4444';
     ctx.textAlign = 'left';
-    ctx.fillText('距離 (m)', canvas.width / 2 - 30, canvas.height - 10);
+    ctx.fillText('軌道', legendX + legendLineLength + 5, legendY + 4);
+    
+    // Velocity legend
+    ctx.strokeStyle = '#4444ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(legendX, legendY + legendSpacing);
+    ctx.lineTo(legendX + legendLineLength, legendY + legendSpacing);
+    ctx.stroke();
+    ctx.fillStyle = '#4444ff';
+    ctx.fillText('速度', legendX + legendLineLength + 5, legendY + legendSpacing + 4);
+    
+    // Energy legend
+    ctx.strokeStyle = '#44ff44';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(legendX, legendY + legendSpacing * 2);
+    ctx.lineTo(legendX + legendLineLength, legendY + legendSpacing * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#44ff44';
+    ctx.fillText('エネルギー', legendX + legendLineLength + 5, legendY + legendSpacing * 2 + 4);
+    
+    // Deviation legend
+    ctx.strokeStyle = '#ff44ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(legendX, legendY + legendSpacing * 3);
+    ctx.lineTo(legendX + legendLineLength, legendY + legendSpacing * 3);
+    ctx.stroke();
+    ctx.fillStyle = '#ff44ff';
+    ctx.fillText('偏差', legendX + legendLineLength + 5, legendY + legendSpacing * 3 + 4);
     
     // Store distance marker data for mouse interaction
     const distanceMarkers = [];
