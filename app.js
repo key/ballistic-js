@@ -407,7 +407,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 {
                     label: 'エネルギー',
                     data: displayEnergies,
-                    borderColor: '#44ff44',
+                    borderColor: '#00aa00',
                     backgroundColor: 'transparent',
                     borderWidth: 1.5,
                     yAxisID: 'y2',
@@ -574,14 +574,14 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                         font: {
                             size: 12
                         },
-                        color: '#44ff44'
+                        color: '#00aa00'
                     },
                     grid: {
                         display: false,
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#44ff44'
+                        color: '#00aa00'
                     }
                 },
                 y3: {
