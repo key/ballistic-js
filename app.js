@@ -486,9 +486,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.setLineDash([]);
     
     // Draw scope height line
-    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
-    const totalScopeHeight = initialHeight + scopeHeight;
+    const totalScopeHeight = zeroInHeight; // Already calculated above
     
     ctx.strokeStyle = '#4444ff';
     ctx.lineWidth = 1;
