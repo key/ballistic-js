@@ -643,7 +643,18 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     
     // Add subsonic threshold annotation if found
     if (subsonicDistance !== null) {
-        // Find the velocity at subsonic distance
+        // Add vertical line
+        chartInstance.options.plugins.annotation.annotations.subsonicLine = {
+            type: 'line',
+            xMin: subsonicDistance,
+            xMax: subsonicDistance,
+            borderColor: '#4444ff',
+            borderWidth: 2,
+            borderDash: [8, 4],
+            xScaleID: 'x'
+        };
+        
+        // Find the velocity at subsonic distance for box position
         let subsonicVelocity = soundSpeed;
         for (let i = 0; i < trajectoryData.length - 1; i++) {
             if (trajectoryData[i].x <= subsonicDistance && trajectoryData[i+1].x >= subsonicDistance) {
@@ -656,6 +667,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
             }
         }
         
+        // Add box label on velocity line
         chartInstance.options.plugins.annotation.annotations.subsonicBox = {
             type: 'label',
             xValue: subsonicDistance,
@@ -676,12 +688,6 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 right: 8
             },
             borderRadius: 4,
-            position: {
-                x: 'start',
-                y: 'end'
-            },
-            xAdjust: 15,  // 右に15ピクセル移動
-            yAdjust: -25, // 上に25ピクセル移動
             yScaleID: 'y1',  // Velocity scale
             xScaleID: 'x'
         };
