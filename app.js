@@ -998,10 +998,18 @@ canvas.addEventListener('mousemove', function(e) {
             energyUnit = 'ft-lbf';
         }
         
+        // Calculate deviation from zero-in height
+        const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M;
+        const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+        const zeroInHeight = initialHeight + scopeHeight;
+        const deviation = (closestPoint.y - zeroInHeight) * M_TO_MM; // Convert to mm
+        const deviationSign = deviation >= 0 ? '+' : '';
+        
         tooltip.innerHTML = `
             距離: ${closestPoint.x.toFixed(1)}m<br>
             時間: ${closestPoint.t.toFixed(2)}秒<br>
             高度: ${closestPoint.y.toFixed(1)}m<br>
+            偏差: ${deviationSign}${deviation.toFixed(0)}mm<br>
             速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
             エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
         `;
