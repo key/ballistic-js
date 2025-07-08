@@ -343,12 +343,16 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         label: {
             content: `スコープハイト: ${zeroInHeight.toFixed(3)}m`,
             display: true,
-            position: 'start',
+            position: {
+                x: 'start',
+                y: 'start'
+            },
             backgroundColor: 'rgba(68, 68, 255, 0.8)',
             color: 'white',
             font: {
                 size: 10
-            }
+            },
+            yAdjust: -20  // 上に20ピクセル移動
         },
         yScaleID: 'y' // Height scale
     };
@@ -672,6 +676,12 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 right: 8
             },
             borderRadius: 4,
+            position: {
+                x: 'start',
+                y: 'end'
+            },
+            xAdjust: 15,  // 右に15ピクセル移動
+            yAdjust: -25, // 上に25ピクセル移動
             yScaleID: 'y1',  // Velocity scale
             xScaleID: 'x'
         };
