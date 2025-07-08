@@ -639,23 +639,40 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     
     // Add subsonic threshold annotation if found
     if (subsonicDistance !== null) {
-        chartInstance.options.plugins.annotation.annotations.subsonicLine = {
-            type: 'line',
-            xMin: subsonicDistance,
-            xMax: subsonicDistance,
-            borderColor: '#ff8800',
+        // Find the velocity at subsonic distance
+        let subsonicVelocity = soundSpeed;
+        for (let i = 0; i < trajectoryData.length - 1; i++) {
+            if (trajectoryData[i].x <= subsonicDistance && trajectoryData[i+1].x >= subsonicDistance) {
+                // Interpolate to find exact velocity at subsonic distance
+                const ratio = (subsonicDistance - trajectoryData[i].x) / (trajectoryData[i+1].x - trajectoryData[i].x);
+                const v1 = Math.sqrt(trajectoryData[i].vx * trajectoryData[i].vx + trajectoryData[i].vy * trajectoryData[i].vy);
+                const v2 = Math.sqrt(trajectoryData[i+1].vx * trajectoryData[i+1].vx + trajectoryData[i+1].vy * trajectoryData[i+1].vy);
+                subsonicVelocity = v1 + ratio * (v2 - v1);
+                break;
+            }
+        }
+        
+        chartInstance.options.plugins.annotation.annotations.subsonicBox = {
+            type: 'label',
+            xValue: subsonicDistance,
+            yValue: subsonicVelocity,
+            content: ['亜音速', `${subsonicDistance.toFixed(0)}m`],
+            backgroundColor: 'rgba(68, 68, 255, 0.9)',
+            borderColor: '#4444ff',
             borderWidth: 2,
-            borderDash: [8, 4],
-            label: {
-                content: `亜音速: ${subsonicDistance.toFixed(0)}m`,
-                display: true,
-                position: 'start',
-                backgroundColor: 'rgba(255, 136, 0, 0.8)',
-                color: 'white',
-                font: {
-                    size: 10
-                }
+            color: 'white',
+            font: {
+                size: 11,
+                weight: 'bold'
             },
+            padding: {
+                top: 4,
+                bottom: 4,
+                left: 8,
+                right: 8
+            },
+            borderRadius: 4,
+            yScaleID: 'y1',  // Velocity scale
             xScaleID: 'x'
         };
         chartInstance.update();
