@@ -376,6 +376,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         };
     }
     
+    
     // Chart.js configuration
     const config = {
         type: 'line',
@@ -616,6 +617,9 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     // Create the chart
     chartInstance = new Chart(ctx, config);
     
+    // Update distance table
+    updateDistanceTable(trajectoryData, mass, zeroInHeight);
+    
     // Find subsonic threshold (where velocity drops below sound speed)
     const soundSpeed = calculateSoundSpeed(parseFloat(document.getElementById('temperature').value));
     let subsonicDistance = null;
@@ -656,6 +660,58 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         };
         chartInstance.update();
     }
+}
+
+function updateDistanceTable(trajectoryData, mass, zeroInHeight) {
+    const markerDistances = [50, 100, 150, 200, 300];
+    const tbody = document.querySelector('#distanceTable tbody');
+    tbody.innerHTML = '';
+    
+    markerDistances.forEach(distance => {
+        // Find the trajectory point closest to this distance
+        let closestPoint = null;
+        let minDiff = Infinity;
+        
+        for (let point of trajectoryData) {
+            const diff = Math.abs(point.x - distance);
+            if (diff < minDiff && point.y >= 0) {
+                minDiff = diff;
+                closestPoint = point;
+            }
+        }
+        
+        if (closestPoint && closestPoint.x <= Math.max(...trajectoryData.map(p => p.x))) {
+            const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
+            const energy = calculator.calculateEnergy(mass, velocity);
+            const deviation = (closestPoint.y - zeroInHeight) * M_TO_MM;
+            
+            // Format velocity
+            let velocityText = '';
+            if (useMetersPerSec) {
+                velocityText = `${velocity.toFixed(1)} m/s`;
+            } else {
+                velocityText = `${(velocity / FPS_TO_MPS).toFixed(0)} fps`;
+            }
+            
+            // Format energy
+            let energyText = '';
+            if (useFootPounds) {
+                energyText = `${(energy * JOULES_TO_FTLBF).toFixed(0)} ft-lbf`;
+            } else {
+                energyText = `${energy.toFixed(0)} J`;
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${distance}m</td>
+                <td>${closestPoint.y.toFixed(1)}m</td>
+                <td>${velocityText}</td>
+                <td>${energyText}</td>
+                <td>${deviation >= 0 ? '+' : ''}${deviation.toFixed(0)}mm</td>
+            `;
+            tbody.appendChild(row);
+        }
+    });
 }
 
 function calculateZeroAngle() {

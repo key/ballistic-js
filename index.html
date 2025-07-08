@@ -183,8 +183,26 @@
         
         <div class="chart-section">
             <h2>軌道の可視化</h2>
-            <div class="chart-container">
-                <canvas id="trajectoryChart"></canvas>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <canvas id="trajectoryChart"></canvas>
+                </div>
+                <div class="distance-table-container">
+                    <table id="distanceTable" class="distance-table">
+                        <thead>
+                            <tr>
+                                <th>距離</th>
+                                <th>高度</th>
+                                <th>速度</th>
+                                <th>エネルギー</th>
+                                <th>偏差</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
