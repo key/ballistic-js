@@ -183,9 +183,26 @@
         
         <div class="chart-section">
             <h2>軌道の可視化</h2>
-            <div style="position: relative;">
-                <canvas id="trajectoryChart"></canvas>
-                <div id="tooltip" class="tooltip" style="position: absolute; display: none; padding: 8px; border-radius: 4px; font-size: 12px; pointer-events: none;"></div>
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <canvas id="trajectoryChart"></canvas>
+                </div>
+                <div class="distance-table-container">
+                    <table id="distanceTable" class="distance-table">
+                        <thead>
+                            <tr>
+                                <th>距離</th>
+                                <th>高度</th>
+                                <th>速度</th>
+                                <th>エネルギー</th>
+                                <th>偏差</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -201,6 +218,8 @@
         </div>
     </footer>
     
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="dragFunctions.js"></script>
     <script src="ballistics.js"></script>
     <script src="app.js"></script>

@@ -1,9 +1,9 @@
 // Wait for BallisticsCalculator to be available
 const calculator = new BallisticsCalculator();
 let chart = null;
+let chartInstance = null; // Chart.js instance
 let currentTrajectoryData = null;
 let currentMass = null;
-let chartScales = null;
 
 // Unit conversion constants
 const GRAMS_TO_GRAINS = 15.4324;
@@ -300,218 +300,329 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     const canvas = document.getElementById('trajectoryChart');
     const ctx = canvas.getContext('2d');
     
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    // Destroy existing chart if it exists
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
     
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Get zero-in parameters for deviation calculation
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M;
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const zeroInHeight = initialHeight + scopeHeight;
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value) || 0;
     
-    const margin = 40;
-    const plotWidth = canvas.width - 2 * margin;
-    const plotHeight = canvas.height - 2 * margin;
+    // Prepare data for Chart.js
+    const distances = trajectoryData.map(p => p.x);
+    const heights = trajectoryData.map(p => p.y);
+    const velocities = trajectoryData.map(p => Math.sqrt(p.vx * p.vx + p.vy * p.vy));
+    const energies = trajectoryData.map(p => {
+        const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        return calculator.calculateEnergy(mass, v);
+    });
+    const deviations = trajectoryData.map(p => (p.y - zeroInHeight) * M_TO_MM); // Convert to mm
     
-    const maxX = Math.max(...trajectoryData.map(p => p.x)) * 1.1;
-    const maxY = Math.max(...trajectoryData.map(p => p.y)) * 1.1;
+    // Convert energy units if needed
+    const displayEnergies = useFootPounds ? energies.map(e => e * JOULES_TO_FTLBF) : energies;
+    const energyUnit = useFootPounds ? 'ft-lbf' : 'J';
     
-    const scaleX = plotWidth / maxX;
-    const scaleY = plotHeight / maxY;
+    // Store trajectory data for tooltips
+    currentTrajectoryData = trajectoryData;
+    currentMass = mass;
     
-    // Store scales for mouse hover
-    chartScales = {
-        margin,
-        scaleX,
-        scaleY,
-        maxX,
-        maxY
+    // Prepare annotations
+    const annotations = {};
+    
+    // Add scope height line annotation
+    annotations.scopeHeightLine = {
+        type: 'line',
+        yMin: zeroInHeight,
+        yMax: zeroInHeight,
+        borderColor: '#4444ff',
+        borderWidth: 1,
+        borderDash: [10, 5],
+        label: {
+            content: `スコープハイト: ${zeroInHeight.toFixed(3)}m`,
+            display: true,
+            position: {
+                x: 'start',
+                y: 'start'
+            },
+            backgroundColor: 'rgba(68, 68, 255, 0.8)',
+            color: 'white',
+            font: {
+                size: 10
+            },
+            yAdjust: -20  // 上に20ピクセル移動
+        },
+        yScaleID: 'y' // Height scale
     };
     
-    // Draw horizontal grid lines (distance) - 25m dashed, 50m solid
-    ctx.lineWidth = 1;
-    for (let distance = 0; distance <= maxX; distance += 25) {
-        const x = margin + distance * scaleX;
-        
-        if (x > margin && x < canvas.width - margin) {
-            ctx.strokeStyle = '#ddd';
-            if (distance % 50 === 0) {
-                // Solid line for 50m intervals
-                ctx.setLineDash([]);
-            } else {
-                // Dashed line for 25m intervals
-                ctx.setLineDash([5, 5]);
-            }
-            
-            ctx.beginPath();
-            ctx.moveTo(x, margin);
-            ctx.lineTo(x, canvas.height - margin);
-            ctx.stroke();
-        }
-    }
-    ctx.setLineDash([]);
-    
-    // Draw vertical grid lines (height) - every 5m
-    ctx.strokeStyle = '#ddd';
-    ctx.lineWidth = 1;
-    for (let height = 0; height <= maxY; height += 5) {
-        const y = canvas.height - margin - height * scaleY;
-        
-        if (y > margin && y < canvas.height - margin) {
-            ctx.beginPath();
-            ctx.moveTo(margin, y);
-            ctx.lineTo(canvas.width - margin, y);
-            ctx.stroke();
-        }
-    }
-    
-    // Draw axes
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
-    
-    // Draw horizontal axis (x-axis)
-    ctx.beginPath();
-    ctx.moveTo(margin, canvas.height - margin);
-    ctx.lineTo(canvas.width - margin, canvas.height - margin);
-    ctx.stroke();
-    
-    // Draw vertical axis (y-axis)
-    ctx.beginPath();
-    ctx.moveTo(margin, margin);
-    ctx.lineTo(margin, canvas.height - margin);
-    ctx.stroke();
-    
-    ctx.strokeStyle = '#ff4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    trajectoryData.forEach((point, index) => {
-        const x = margin + point.x * scaleX;
-        const y = canvas.height - margin - point.y * scaleY;
-        
-        if (index === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
-    });
-    ctx.stroke();
-    
-    // Draw scope height line
-    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
-    const totalScopeHeight = initialHeight + scopeHeight;
-    
-    ctx.strokeStyle = '#4444ff';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([10, 5]); // Dashed line
-    ctx.beginPath();
-    const scopeY = canvas.height - margin - totalScopeHeight * scaleY;
-    ctx.moveTo(margin, scopeY);
-    ctx.lineTo(canvas.width - margin, scopeY);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset to solid line
-    
-    // Add label for scope height
-    ctx.fillStyle = '#4444ff';
-    ctx.font = '10px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`スコープハイト: ${totalScopeHeight.toFixed(3)}m`, margin + 5, scopeY - 5);
-    
-    // Draw zero-in distance marker if selected
-    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    // Add zero-in distance marker if selected
     if (zeroDistance) {
-        const zeroX = margin + zeroDistance * scaleX;
-        if (zeroX <= canvas.width - margin) {
-            ctx.strokeStyle = '#00aa00';  // Darker green
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(zeroX, margin);
-            ctx.lineTo(zeroX, canvas.height - margin);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Add label
-            ctx.fillStyle = '#00aa00';  // Darker green
-            ctx.font = '10px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`ゼロイン: ${zeroDistance}m`, zeroX, margin - 5);
-        }
+        annotations.zeroDistanceLine = {
+            type: 'line',
+            xMin: zeroDistance,
+            xMax: zeroDistance,
+            borderColor: '#00aa00',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                content: `ゼロイン: ${zeroDistance}m`,
+                display: true,
+                position: 'start',
+                backgroundColor: 'rgba(0, 170, 0, 0.8)',
+                color: 'white',
+                font: {
+                    size: 10
+                }
+            },
+            xScaleID: 'x'
+        };
     }
     
-    ctx.fillStyle = '#333';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
     
-    // X-axis labels (distance) - every 50m
-    for (let distance = 0; distance <= maxX; distance += 50) {
-        const x = margin + distance * scaleX;
-        if (x >= margin && x <= canvas.width - margin) {
-            ctx.fillText(distance + 'm', x, canvas.height - margin + 20);
-        }
-    }
-    
-    // Y-axis labels (height) - every 5m
-    ctx.textAlign = 'right';
-    for (let height = 0; height <= maxY; height += 5) {
-        const y = canvas.height - margin - height * scaleY;
-        if (y >= margin && y <= canvas.height - margin) {
-            ctx.fillText(height + 'm', margin - 5, y + 5);
-        }
-    }
-    
-    ctx.save();
-    ctx.translate(margin - 30, canvas.height / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center';
-    ctx.fillText('高度 (m)', 0, 0);
-    ctx.restore();
-    
-    ctx.textAlign = 'left';
-    ctx.fillText('距離 (m)', canvas.width / 2 - 30, canvas.height - 10);
-    
-    // Store distance marker data for mouse interaction
-    const distanceMarkers = [];
-    const distances = [50, 100, 150, 200, 300];
-    
-    distances.forEach(distance => {
-        // Find the trajectory point closest to this distance
-        let closestPoint = null;
-        let minDiff = Infinity;
-        
-        for (let point of trajectoryData) {
-            const diff = Math.abs(point.x - distance);
-            if (diff < minDiff && point.y >= 0) {
-                minDiff = diff;
-                closestPoint = point;
+    // Chart.js configuration
+    const config = {
+        type: 'line',
+        data: {
+            labels: distances,
+            datasets: [
+                {
+                    label: '軌道',
+                    data: heights,
+                    borderColor: '#ff4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    tension: 0
+                },
+                {
+                    label: '速度',
+                    data: velocities,
+                    borderColor: '#4444ff',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    yAxisID: 'y1',
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    tension: 0
+                },
+                {
+                    label: 'エネルギー',
+                    data: displayEnergies,
+                    borderColor: '#00aa00',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    yAxisID: 'y2',
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    tension: 0
+                },
+                {
+                    label: '偏差',
+                    data: deviations,
+                    borderColor: '#ff44ff',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    yAxisID: 'y3',
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    tension: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 10,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        title: function(context) {
+                            const index = context[0].dataIndex;
+                            const point = trajectoryData[index];
+                            return `距離: ${point.x.toFixed(1)}m`;
+                        },
+                        afterTitle: function(context) {
+                            const index = context[0].dataIndex;
+                            const point = trajectoryData[index];
+                            return `時間: ${point.t.toFixed(2)}秒`;
+                        },
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label;
+                            const value = context.parsed.y;
+                            
+                            switch(datasetLabel) {
+                                case '軌道':
+                                    return `高度: ${value.toFixed(1)}m`;
+                                case '速度':
+                                    if (useMetersPerSec) {
+                                        return `速度: ${value.toFixed(1)} m/s`;
+                                    } else {
+                                        return `速度: ${(value / FPS_TO_MPS).toFixed(0)} fps`;
+                                    }
+                                case 'エネルギー':
+                                    return `エネルギー: ${value.toFixed(0)} ${energyUnit}`;
+                                case '偏差':
+                                    const sign = value >= 0 ? '+' : '';
+                                    return `偏差: ${sign}${value.toFixed(0)}mm`;
+                                default:
+                                    return '';
+                            }
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: annotations
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: '距離 (m)',
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        display: true,
+                        drawBorder: true,
+                        drawOnChartArea: true,
+                        drawTicks: true,
+                        tickLength: 5,
+                        lineWidth: function(context) {
+                            if (context.tick.value % 50 === 0) {
+                                return 1; // Solid line for 50m intervals
+                            }
+                            return 0.5; // Thinner for other intervals
+                        },
+                        color: function(context) {
+                            if (context.tick.value % 50 === 0) {
+                                return '#ddd';
+                            }
+                            return '#eee';
+                        }
+                    },
+                    ticks: {
+                        stepSize: 25,
+                        maxTicksLimit: 20
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '高度 (m)',
+                        font: {
+                            size: 12
+                        },
+                        color: '#ff4444'
+                    },
+                    grid: {
+                        display: true,
+                        drawBorder: true,
+                        drawOnChartArea: true,
+                        drawTicks: true,
+                        color: '#eee'
+                    },
+                    ticks: {
+                        stepSize: 5,
+                        color: '#ff4444'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '速度 (m/s)',
+                        font: {
+                            size: 12
+                        },
+                        color: '#4444ff'
+                    },
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#4444ff'
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: `エネルギー (${energyUnit})`,
+                        font: {
+                            size: 12
+                        },
+                        color: '#00aa00'
+                    },
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#00aa00'
+                    }
+                },
+                y3: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '偏差 (mm)',
+                        font: {
+                            size: 12
+                        },
+                        color: '#ff44ff'
+                    },
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#ff44ff',
+                        callback: function(value) {
+                            return (value >= 0 ? '+' : '') + value;
+                        },
+                        stepSize: 50
+                    },
+                    min: -500,  // Fixed minimum at -500mm
+                    grace: '10%'  // Add 10% padding to the scale for max
+                }
             }
         }
-        
-        if (closestPoint && closestPoint.x <= maxX) {
-            const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-            const velocityFps = velocity / FPS_TO_MPS; // Convert m/s to fps
-            const energy = calculator.calculateEnergy(mass, velocity);
-            
-            // Use exact distance for x position to align with grid lines
-            const px = margin + distance * scaleX;
-            const py = canvas.height - margin - closestPoint.y * scaleY;
-            
-            // Store marker data for interaction
-            distanceMarkers.push({
-                distance: distance,
-                x: px,
-                y: py,
-                height: closestPoint.y,
-                velocityFps: velocityFps,
-                energy: energy,
-                energyInJoules: energy,  // Always store in joules for conversion
-                scopeHeight: totalScopeHeight,  // Store scope height for zero deviation calculation
-                time: closestPoint.t  // Store time in seconds
-            });
-            
-            // Draw small circle marker
-            ctx.fillStyle = '#666';
-            ctx.beginPath();
-            ctx.arc(px, py, 4, 0, 2 * Math.PI);
-            ctx.fill();
-        }
-    });
+    };
+    
+    // Create the chart
+    chartInstance = new Chart(ctx, config);
+    
+    // Update distance table
+    updateDistanceTable(trajectoryData, mass, zeroInHeight);
     
     // Find subsonic threshold (where velocity drops below sound speed)
     const soundSpeed = calculateSoundSpeed(parseFloat(document.getElementById('temperature').value));
@@ -530,30 +641,110 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         }
     }
     
-    // Draw subsonic threshold line if found
-    if (subsonicDistance !== null && subsonicDistance <= maxX) {
-        const subsonicX = margin + subsonicDistance * scaleX;
-        ctx.strokeStyle = '#ff8800';  // Orange color
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 4]);
-        ctx.beginPath();
-        ctx.moveTo(subsonicX, margin);
-        ctx.lineTo(subsonicX, canvas.height - margin);
-        ctx.stroke();
-        ctx.setLineDash([]);
+    // Add subsonic threshold annotation if found
+    if (subsonicDistance !== null) {
+        // Add vertical line
+        chartInstance.options.plugins.annotation.annotations.subsonicLine = {
+            type: 'line',
+            xMin: subsonicDistance,
+            xMax: subsonicDistance,
+            borderColor: '#4444ff',
+            borderWidth: 2,
+            borderDash: [8, 4],
+            xScaleID: 'x'
+        };
         
-        // Add label
-        ctx.fillStyle = '#ff8800';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.save();
-        ctx.translate(subsonicX, margin - 5);
-        ctx.fillText(`亜音速: ${subsonicDistance.toFixed(0)}m`, 0, 0);
-        ctx.restore();
+        // Find the velocity at subsonic distance for box position
+        let subsonicVelocity = soundSpeed;
+        for (let i = 0; i < trajectoryData.length - 1; i++) {
+            if (trajectoryData[i].x <= subsonicDistance && trajectoryData[i+1].x >= subsonicDistance) {
+                // Interpolate to find exact velocity at subsonic distance
+                const ratio = (subsonicDistance - trajectoryData[i].x) / (trajectoryData[i+1].x - trajectoryData[i].x);
+                const v1 = Math.sqrt(trajectoryData[i].vx * trajectoryData[i].vx + trajectoryData[i].vy * trajectoryData[i].vy);
+                const v2 = Math.sqrt(trajectoryData[i+1].vx * trajectoryData[i+1].vx + trajectoryData[i+1].vy * trajectoryData[i+1].vy);
+                subsonicVelocity = v1 + ratio * (v2 - v1);
+                break;
+            }
+        }
+        
+        // Add box label on velocity line
+        chartInstance.options.plugins.annotation.annotations.subsonicBox = {
+            type: 'label',
+            xValue: subsonicDistance,
+            yValue: subsonicVelocity,
+            content: ['亜音速', `${subsonicDistance.toFixed(0)}m`],
+            backgroundColor: 'rgba(68, 68, 255, 0.9)',
+            borderColor: '#4444ff',
+            borderWidth: 2,
+            color: 'white',
+            font: {
+                size: 11,
+                weight: 'bold'
+            },
+            padding: {
+                top: 4,
+                bottom: 4,
+                left: 8,
+                right: 8
+            },
+            borderRadius: 4,
+            yScaleID: 'y1',  // Velocity scale
+            xScaleID: 'x'
+        };
+        chartInstance.update();
     }
+}
+
+function updateDistanceTable(trajectoryData, mass, zeroInHeight) {
+    const markerDistances = [50, 100, 150, 200, 300];
+    const tbody = document.querySelector('#distanceTable tbody');
+    tbody.innerHTML = '';
     
-    // Store markers for mouse/touch interaction
-    chartScales.distanceMarkers = distanceMarkers;
+    markerDistances.forEach(distance => {
+        // Find the trajectory point closest to this distance
+        let closestPoint = null;
+        let minDiff = Infinity;
+        
+        for (let point of trajectoryData) {
+            const diff = Math.abs(point.x - distance);
+            if (diff < minDiff && point.y >= 0) {
+                minDiff = diff;
+                closestPoint = point;
+            }
+        }
+        
+        if (closestPoint && closestPoint.x <= Math.max(...trajectoryData.map(p => p.x))) {
+            const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
+            const energy = calculator.calculateEnergy(mass, velocity);
+            const deviation = (closestPoint.y - zeroInHeight) * M_TO_MM;
+            
+            // Format velocity
+            let velocityText = '';
+            if (useMetersPerSec) {
+                velocityText = `${velocity.toFixed(1)} m/s`;
+            } else {
+                velocityText = `${(velocity / FPS_TO_MPS).toFixed(0)} fps`;
+            }
+            
+            // Format energy
+            let energyText = '';
+            if (useFootPounds) {
+                energyText = `${(energy * JOULES_TO_FTLBF).toFixed(0)} ft-lbf`;
+            } else {
+                energyText = `${energy.toFixed(0)} J`;
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${distance}m</td>
+                <td>${closestPoint.y.toFixed(1)}m</td>
+                <td>${velocityText}</td>
+                <td>${energyText}</td>
+                <td>${deviation >= 0 ? '+' : ''}${deviation.toFixed(0)}mm</td>
+            `;
+            tbody.appendChild(row);
+        }
+    });
 }
 
 function calculateZeroAngle() {
@@ -714,142 +905,7 @@ function downloadCSV() {
     document.body.removeChild(link);
 }
 
-// Mouse hover functionality
-const canvas = document.getElementById('trajectoryChart');
-const tooltip = document.getElementById('tooltip');
-
-canvas.addEventListener('mousemove', function(e) {
-    if (!currentTrajectoryData || !chartScales || !currentMass) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    // Check if near a distance marker first
-    if (chartScales.distanceMarkers) {
-        for (let marker of chartScales.distanceMarkers) {
-            const markerDist = Math.sqrt(Math.pow(mouseX - marker.x, 2) + Math.pow(mouseY - marker.y, 2));
-            if (markerDist < 15) { // Within 15 pixels of marker
-                // Convert energy if needed
-                let energyValue = marker.energyInJoules;
-                let energyUnit = 'J';
-                if (useFootPounds) {
-                    energyValue = marker.energyInJoules * JOULES_TO_FTLBF;
-                    energyUnit = 'ft-lbf';
-                }
-                
-                // Convert velocity if needed
-                let velocityValue = marker.velocityFps;
-                let velocityUnit = 'fps';
-                if (useMetersPerSec) {
-                    velocityValue = marker.velocityFps * FPS_TO_MPS;
-                    velocityUnit = 'm/s';
-                }
-                
-                // Calculate zero deviation in mm
-                const zeroDeviation = (marker.height - marker.scopeHeight) * M_TO_MM; // Convert m to mm
-                const deviationSign = zeroDeviation >= 0 ? '+' : '';
-                
-                tooltip.innerHTML = `
-                    <strong>${marker.distance}m</strong><br>
-                    時間: ${marker.time.toFixed(2)}秒<br>
-                    高度: ${marker.height.toFixed(1)}m<br>
-                    ゼロ偏差: ${deviationSign}${zeroDeviation.toFixed(0)}mm<br>
-                    速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
-                    エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
-                `;
-                
-                tooltip.className = 'tooltip marker-tooltip';
-                tooltip.style.left = (mouseX + 10) + 'px';
-                tooltip.style.top = (mouseY - 60) + 'px';
-                tooltip.style.display = 'block';
-                return;
-            }
-        }
-    }
-    
-    // Convert mouse position to chart coordinates
-    const chartX = (mouseX - chartScales.margin) / chartScales.scaleX;
-    const chartY = (canvas.height - mouseY - chartScales.margin) / chartScales.scaleY;
-    
-    // Find closest trajectory point
-    let closestPoint = null;
-    let minDistance = Infinity;
-    
-    for (let point of currentTrajectoryData) {
-        const distance = Math.sqrt(Math.pow(point.x - chartX, 2) + Math.pow(point.y - chartY, 2));
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestPoint = point;
-        }
-    }
-    
-    // Show tooltip if close enough to trajectory
-    if (closestPoint && minDistance < 10) {
-        const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-        const energy = calculator.calculateEnergy(currentMass, velocity);
-        
-        // Convert velocity if needed
-        let velocityValue = velocity;
-        let velocityUnit = 'm/s';
-        if (!useMetersPerSec) {
-            velocityValue = velocity / FPS_TO_MPS;
-            velocityUnit = 'fps';
-        }
-        
-        // Convert energy if needed
-        let energyValue = energy;
-        let energyUnit = 'J';
-        if (useFootPounds) {
-            energyValue = energy * JOULES_TO_FTLBF;
-            energyUnit = 'ft-lbf';
-        }
-        
-        tooltip.innerHTML = `
-            距離: ${closestPoint.x.toFixed(1)}m<br>
-            時間: ${closestPoint.t.toFixed(2)}秒<br>
-            高度: ${closestPoint.y.toFixed(1)}m<br>
-            速度: ${velocityValue.toFixed(useMetersPerSec ? 1 : 0)} ${velocityUnit}<br>
-            エネルギー: ${energyValue.toFixed(0)} ${energyUnit}
-        `;
-        
-        tooltip.className = 'tooltip';
-        tooltip.style.left = (mouseX + 10) + 'px';
-        tooltip.style.top = (mouseY - 40) + 'px';
-        tooltip.style.display = 'block';
-    } else {
-        tooltip.style.display = 'none';
-    }
-});
-
-canvas.addEventListener('mouseleave', function() {
-    tooltip.style.display = 'none';
-});
-
-// Touch support for mobile devices
-canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousemove', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-});
-
-canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousemove', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-});
-
-canvas.addEventListener('touchend', function() {
-    tooltip.style.display = 'none';
-});
+// Note: Mouse hover functionality is now handled by Chart.js tooltip configuration
 
 function calculateAirDensity() {
     const temperature = parseFloat(document.getElementById('temperature').value);
