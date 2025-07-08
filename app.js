@@ -306,7 +306,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const margin = 40;
-    const rightMargin = 60; // Extra margin for right Y-axis
+    const rightMargin = 150; // Extra margin for right Y-axis with multiple scales
     const plotWidth = canvas.width - margin - rightMargin;
     const plotHeight = canvas.height - 2 * margin;
     
@@ -328,7 +328,8 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     const initialHeight = parseFloat(document.getElementById('initialHeight').value);
     const zeroInHeight = initialHeight + scopeHeight;
     const deviations = trajectoryData.map(p => (p.y - zeroInHeight) * M_TO_MM); // Convert to mm
-    const maxDeviation = Math.max(...deviations.map(Math.abs)) * 1.1;
+    // Fixed scale: +50mm to -500mm
+    const maxDeviation = 550; // Total range of 550mm (50 to -500)
     
     const scaleX = plotWidth / maxX;
     const scaleY = plotHeight / maxY;
@@ -420,7 +421,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     // Calculate scales for additional data
     const scaleVelocity = plotHeight / maxVelocity;
     const scaleEnergy = plotHeight / maxEnergy;
-    const scaleDeviation = plotHeight / (2 * maxDeviation); // Scale for both positive and negative
+    const scaleDeviation = plotHeight / maxDeviation; // Scale for range +50 to -500
     
     // Draw velocity line
     ctx.strokeStyle = '#4444ff';
@@ -457,15 +458,15 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     });
     ctx.stroke();
     
-    // Draw deviation line (centered at middle of chart)
+    // Draw deviation line (zero at scope height)
     ctx.strokeStyle = '#ff44ff';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    const centerY = canvas.height / 2;
+    const scopeY = canvas.height - margin - zeroInHeight * scaleY; // Same as scope height line
     trajectoryData.forEach((point, index) => {
         const x = margin + point.x * scaleX;
         const deviation = (point.y - zeroInHeight) * M_TO_MM;
-        const y = centerY - deviation * scaleDeviation;
+        const y = scopeY - deviation * scaleDeviation;
         
         if (index === 0) {
             ctx.moveTo(x, y);
@@ -475,15 +476,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     });
     ctx.stroke();
     
-    // Draw zero line for deviation
-    ctx.strokeStyle = '#999';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(margin, centerY);
-    ctx.lineTo(canvas.width - rightMargin, centerY);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // Zero line for deviation is the same as scope height line
     
     // Draw scope height line
     const totalScopeHeight = zeroInHeight; // Already calculated above
@@ -492,7 +485,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
     ctx.lineWidth = 1;
     ctx.setLineDash([10, 5]); // Dashed line
     ctx.beginPath();
-    const scopeY = canvas.height - margin - totalScopeHeight * scaleY;
+    // scopeY already calculated above
     ctx.moveTo(margin, scopeY);
     ctx.lineTo(canvas.width - rightMargin, scopeY);
     ctx.stroke();
@@ -560,7 +553,7 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         }
     }
     
-    // Energy scale labels (using same positions as velocity)
+    // Energy scale labels (right side)
     ctx.fillStyle = '#44ff44';  // Green for energy
     const energyStep = maxEnergy / 5;
     for (let i = 0; i <= 5; i++) {
@@ -568,19 +561,21 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
         const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
         const y = canvas.height - margin - energy * scaleEnergy;
         if (y >= margin && y <= canvas.height - margin) {
-            ctx.fillText(displayEnergy.toFixed(0), canvas.width - rightMargin + 60, y + 5);
+            ctx.fillText(displayEnergy.toFixed(0), canvas.width - rightMargin + 70, y + 5);
         }
     }
     
-    // Deviation labels (center-aligned)
+    
+    // Deviation labels (left side only)
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ff44ff';  // Magenta for deviation
-    const deviationStep = maxDeviation / 2;
-    for (let i = -2; i <= 2; i++) {
-        const deviation = i * deviationStep;
-        const y = centerY - deviation * scaleDeviation;
+    const deviationStep = 50;  // 50mm steps
+    // Range from +50mm to -500mm
+    for (let deviation = 50; deviation >= -500; deviation -= deviationStep) {
+        const y = scopeY - deviation * scaleDeviation;
         if (y >= margin && y <= canvas.height - margin) {
-            ctx.fillText((i === 0 ? '±' : (deviation > 0 ? '+' : '')) + deviation.toFixed(0) + 'mm', margin - 40, y + 5);
+            const deviationText = (deviation > 0 ? '+' : '') + deviation + 'mm';
+            ctx.fillText(deviationText, margin - 5, y + 5);
         }
     }
     
