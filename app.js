@@ -468,25 +468,6 @@ function drawTrajectory(trajectoryData, noDragResult, mass) {
                     display: true,
                     position: 'top'
                 },
-                tooltip: {
-                    callbacks: {
-                        afterLabel: function(context) {
-                            const index = context.dataIndex;
-                            const point = trajectoryData[index];
-                            const v = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
-                            const energy = 0.5 * mass * v * v;
-                            const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
-                            const deviation = (point.y - zeroInHeight) * M_TO_MM;
-                            
-                            return [
-                                `時間: ${point.t.toFixed(2)}秒`,
-                                `速度: ${v.toFixed(1)} m/s`,
-                                `エネルギー: ${displayEnergy.toFixed(0)} ${energyUnit}`,
-                                `偏差: ${deviation.toFixed(0)} mm`
-                            ];
-                        }
-                    }
-                },
                 annotation: {
                     annotations: {}
                 }
