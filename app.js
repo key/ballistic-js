@@ -15,7 +15,7 @@ const M_TO_MM = 1000;
 // Environmental calculation constants
 const ALTITUDE_TEMP_GRADIENT = 0.0065;  // Temperature gradient K/m
 const SEA_LEVEL_TEMP = 288.15;  // Sea level standard temperature K
-const BAROMETRIC_EXPONENT = -5.255;  // Barometric formula exponent
+const BAROMETRIC_EXPONENT = -5.25577;  // Barometric formula exponent (g*M)/(R*L)
 const GAS_CONSTANT = 8.314462618;  // Universal gas constant J/(mol·K)
 const DRY_AIR_MOLAR_MASS = 0.0289644;  // kg/mol
 const WATER_VAPOR_MOLAR_MASS = 0.01801528;  // kg/mol
@@ -913,23 +913,27 @@ function calculateAirDensity() {
     const humidity = parseFloat(document.getElementById('humidity').value);
     const altitude = parseFloat(document.getElementById('altitude').value);
     
-    // 標高による気圧補正
-    const seaLevelPressure = pressure * Math.pow(1 - ALTITUDE_TEMP_GRADIENT * altitude / SEA_LEVEL_TEMP, BAROMETRIC_EXPONENT);
+    // 気圧と温度の扱い
+    // 入力された気圧は現在地（射撃地点）の実測気圧として扱う
+    // 入力された温度も現在地の実測温度として扱う
+    // 標高の影響は既に実測値に反映されているため、追加の補正は不要
+    const currentPressure = pressure;
+    const currentTemperature = temperature;
     
     // 飽和水蒸気圧の計算 (Magnus formula)
-    const Es = 6.1078 * Math.pow(10, (7.5 * temperature) / (temperature + 237.3));
+    const Es = 6.1078 * Math.pow(10, (7.5 * currentTemperature) / (currentTemperature + 237.3));
     
     // 実際の水蒸気圧
     const E = (humidity / 100) * Es;
     
     // 乾燥空気の分圧
-    const Pd = (seaLevelPressure - E) * 100; // hPa to Pa
+    const Pd = (currentPressure - E) * 100; // hPa to Pa
     
     // 水蒸気の分圧
     const Pv = E * 100; // hPa to Pa
     
     // 絶対温度
-    const T = temperature + CELSIUS_TO_KELVIN;
+    const T = currentTemperature + CELSIUS_TO_KELVIN;
     
     // 空気密度の計算
     const airDensity = (Pd * DRY_AIR_MOLAR_MASS + Pv * WATER_VAPOR_MOLAR_MASS) / (GAS_CONSTANT * T);
