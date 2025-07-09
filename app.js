@@ -663,6 +663,46 @@ function drawTrajectory(trajectoryData, noDragResult, mass) {
         };
     }
     
+    // Add scope height annotation if scope height > 0
+    if (scopeHeight > 0) {
+        // Add horizontal line for scope height
+        chartInstance.options.plugins.annotation.annotations.scopeHeightLine = {
+            type: 'line',
+            yMin: initialHeight,
+            yMax: initialHeight,
+            borderColor: '#ff8800',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            yScaleID: 'y'
+        };
+        
+        // Add label for scope height
+        chartInstance.options.plugins.annotation.annotations.scopeHeightLabel = {
+            type: 'label',
+            xValue: 20, // Position near the start
+            yValue: initialHeight,
+            content: [`スコープ高`, `${(scopeHeight * M_TO_MM).toFixed(0)}mm`],
+            backgroundColor: 'rgba(255, 136, 0, 0.9)',
+            borderColor: '#ff8800',
+            borderWidth: 2,
+            color: 'white',
+            font: {
+                size: 11,
+                weight: 'bold'
+            },
+            padding: {
+                top: 4,
+                bottom: 4,
+                left: 8,
+                right: 8
+            },
+            borderRadius: 4,
+            yScaleID: 'y',
+            xScaleID: 'x',
+            position: 'start'
+        };
+    }
+    
     // Find subsonic threshold (where velocity drops below sound speed)
     const soundSpeed = calculateSoundSpeed(parseFloat(document.getElementById('temperature').value));
     let subsonicDistance = null;
