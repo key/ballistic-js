@@ -256,11 +256,26 @@ function displayResults(withDrag, noDrag, energy, momentum) {
         energyUnit = 'ft-lbf';
     }
     
+    // Convert impact velocity to display unit
+    let displayImpactVelocity = withDrag.impactVelocity;
+    let velocityUnit = 'm/s';
+    if (!useMetersPerSec) {
+        displayImpactVelocity = withDrag.impactVelocity / FPS_TO_MPS;
+        velocityUnit = 'fps';
+    }
+    
+    // Calculate impact energy
+    const impactEnergy = 0.5 * currentMass * withDrag.impactVelocity * withDrag.impactVelocity;
+    let displayImpactEnergy = impactEnergy;
+    if (useFootPounds) {
+        displayImpactEnergy = impactEnergy * JOULES_TO_FTLBF;
+    }
+    
     resultsDiv.innerHTML = `
         <div class="results-grid">
             <div class="result-card">
                 <div class="result-value">${withDrag.maxRange.toFixed(1)}</div>
-                <div class="result-label">最大飛距離 (m)</div>
+                <div class="result-label">最大到達距離 (m)</div>
             </div>
             <div class="result-card">
                 <div class="result-value">${withDrag.maxHeight.toFixed(1)}</div>
@@ -271,16 +286,16 @@ function displayResults(withDrag, noDrag, energy, momentum) {
                 <div class="result-label">飛行時間 (秒)</div>
             </div>
             <div class="result-card">
-                <div class="result-value">${withDrag.impactVelocity.toFixed(1)}</div>
-                <div class="result-label">着弾速度 (m/s)</div>
+                <div class="result-value">${displayImpactVelocity.toFixed(1)}</div>
+                <div class="result-label">着弾速度 (${velocityUnit})</div>
             </div>
             <div class="result-card">
                 <div class="result-value">${displayEnergy.toFixed(0)}</div>
                 <div class="result-label">初速エネルギー (${energyUnit})</div>
             </div>
             <div class="result-card">
-                <div class="result-value">${momentum.toFixed(2)}</div>
-                <div class="result-label">運動量 (kg·m/s)</div>
+                <div class="result-value">${displayImpactEnergy.toFixed(0)}</div>
+                <div class="result-label">着弾エネルギー (${energyUnit})</div>
             </div>
         </div>
     `;
