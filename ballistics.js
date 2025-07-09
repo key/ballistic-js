@@ -8,6 +8,8 @@ class BallisticsCalculator {
         this.dragCalculator = typeof window !== 'undefined' 
             ? new window.DragFunctionCalculator() 
             : new (require('./dragFunctions.js').DragFunctionCalculator)();
+        // Bind interpolateDragCoefficient method for direct access
+        this.interpolateDragCoefficient = this.dragCalculator.interpolateDragCoefficient.bind(this.dragCalculator);
     }
 
     calculateTrajectory(params) {
@@ -53,12 +55,23 @@ class BallisticsCalculator {
             const vRelY = vy - windVy;
             const vRel = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
             
-            // Get drag coefficient based on current velocity and drag model
-            const dragCoeff = this.dragCalculator.getDragCoefficientAtVelocity(bc, dragModel, vRel, soundSpeed);
+            // Get drag function value based on current velocity
+            const machNumber = vRel / soundSpeed;
+            const dragFunction = this.interpolateDragCoefficient(machNumber, dragModel);
             
-            const dragForce = 0.5 * dragCoeff * airDensity * area * vRel * vRel;
-            const dragAx = -(dragForce / mass) * (vRelX / vRel);
-            const dragAy = -(dragForce / mass) * (vRelY / vRel);
+            // BC system: deceleration = 41.43 × (dragFunction / BC) × (ρ/ρ₀) × v²
+            // Standard BC formula uses velocity in fps and returns deceleration in ft/s²
+            const vFps = vRel / 0.3048; // Convert m/s to fps
+            const rhoRatio = airDensity / 1.225; // Air density ratio (1.225 kg/m³ is standard)
+            
+            // Calculate deceleration in ft/s² using standard BC formula
+            // Standard formula: a = (ρ/ρ₀) × (i/BC) × (v²/7503)
+            // where 7503 is the standard constant for BC calculations
+            const dragDecelFps2 = (dragFunction / bc) * rhoRatio * (vFps * vFps) / 7503;
+            // Convert to m/s²
+            const dragDecel = dragDecelFps2 * 0.3048;
+            const dragAx = -dragDecel * (vRelX / vRel);
+            const dragAy = -dragDecel * (vRelY / vRel);
 
             vx += dragAx * this.timeStep;
             vy += (dragAy - this.g) * this.timeStep;

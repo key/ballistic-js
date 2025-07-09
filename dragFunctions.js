@@ -197,10 +197,19 @@ class DragFunctionCalculator {
     // Calculate actual drag coefficient from BC
     calculateDragCoefficient(bc, dragModel, machNumber) {
         const cdRatio = this.interpolateDragCoefficient(machNumber, dragModel);
-        const referenceCd = this.referenceCd[dragModel];
         
-        // Cd = (reference_Cd * Cd_ratio) / BC
-        return (referenceCd * cdRatio) / bc;
+        // The BC system is based on comparing to a standard projectile
+        // The drag coefficient ratio from the table already includes the shape effects
+        // We need to scale by the BC which represents how streamlined our bullet is
+        // compared to the standard (higher BC = less drag)
+        
+        // Standard atmosphere density at sea level: 1.225 kg/m³
+        // Standard sectional density for G models uses specific units
+        // BC incorporates the mass/area ratio and form factor
+        
+        // For the physics calculation, we use the drag function value directly
+        // The BC scaling is applied in the force calculation
+        return cdRatio;
     }
 
     // Convert between different BC standards

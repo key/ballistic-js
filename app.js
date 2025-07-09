@@ -248,188 +248,207 @@ function calculate() {
 function displayResults(withDrag, noDrag, energy, momentum) {
     const resultsDiv = document.getElementById('results');
     
-    // Convert energy if needed
-    let energyValue = energy;
+    // Convert energy to display unit
+    let displayEnergy = energy;
     let energyUnit = 'J';
     if (useFootPounds) {
-        // Convert joules to foot-pounds force
-        energyValue = energy * JOULES_TO_FTLBF;
+        displayEnergy = energy * JOULES_TO_FTLBF;
         energyUnit = 'ft-lbf';
-    }
-    
-    // Convert impact velocity if needed
-    let impactVelocityValue = withDrag.impactVelocity;
-    let velocityUnit = 'm/s';
-    if (!useMetersPerSec) {
-        // Convert m/s to fps
-        impactVelocityValue = withDrag.impactVelocity / FPS_TO_MPS;
-        velocityUnit = 'fps';
     }
     
     resultsDiv.innerHTML = `
         <div class="results-grid">
             <div class="result-card">
-                <div class="result-value">${withDrag.maxRange.toFixed(0)}</div>
-                <div class="result-label">最大射程 (m)</div>
+                <div class="result-value">${withDrag.maxRange.toFixed(1)}</div>
+                <div class="result-label">最大飛距離 (m)</div>
             </div>
-            
             <div class="result-card">
                 <div class="result-value">${withDrag.maxHeight.toFixed(1)}</div>
                 <div class="result-label">最大高度 (m)</div>
             </div>
-            
             <div class="result-card">
-                <div class="result-value">${withDrag.flightTime.toFixed(1)}</div>
-                <div class="result-label">飛行時間 (s)</div>
+                <div class="result-value">${withDrag.flightTime.toFixed(2)}</div>
+                <div class="result-label">飛行時間 (秒)</div>
             </div>
-            
             <div class="result-card">
-                <div class="result-value">${impactVelocityValue.toFixed(useMetersPerSec ? 1 : 0)}</div>
-                <div class="result-label">着弾速度 (${velocityUnit})</div>
+                <div class="result-value">${withDrag.impactVelocity.toFixed(1)}</div>
+                <div class="result-label">着弾速度 (m/s)</div>
             </div>
-            
             <div class="result-card">
-                <div class="result-value">${energyValue.toFixed(0)}</div>
-                <div class="result-label">初期エネルギー (${energyUnit})</div>
+                <div class="result-value">${displayEnergy.toFixed(0)}</div>
+                <div class="result-label">初速エネルギー (${energyUnit})</div>
             </div>
+            <div class="result-card">
+                <div class="result-value">${momentum.toFixed(2)}</div>
+                <div class="result-label">運動量 (kg·m/s)</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 6px;">
+            <h4 style="margin-top: 0;">空気抵抗なしの理論値との比較</h4>
+            <p>最大飛距離: ${noDrag.maxRange.toFixed(1)} m (差: ${(withDrag.maxRange - noDrag.maxRange).toFixed(1)} m)</p>
+            <p>最大高度: ${noDrag.maxHeight.toFixed(1)} m (差: ${(withDrag.maxHeight - noDrag.maxHeight).toFixed(1)} m)</p>
+            <p>飛行時間: ${noDrag.flightTime.toFixed(2)} 秒 (差: ${(withDrag.flightTime - noDrag.flightTime).toFixed(2)} 秒)</p>
         </div>
     `;
 }
 
-function drawTrajectory(trajectoryData, noDragData, mass) {
-    const canvas = document.getElementById('trajectoryChart');
-    const ctx = canvas.getContext('2d');
+function calculateZeroAngle() {
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
+    if (!zeroDistance) return;
     
-    // Destroy existing chart if it exists
+    const params = getInputValues();
+    const scopeHeight = params.scopeHeight;
+    const totalScopeHeight = params.initialHeight + scopeHeight;
+    
+    // Binary search for the angle that gives zero at the specified distance
+    let minAngle = -5; // degrees
+    let maxAngle = 5;  // degrees
+    let bestAngle = 0;
+    let iterations = 0;
+    const maxIterations = 50;
+    const tolerance = 0.001; // meters
+    
+    while (iterations < maxIterations) {
+        const midAngle = (minAngle + maxAngle) / 2;
+        params.angle = midAngle;
+        
+        const trajectory = calculator.calculateTrajectory(params);
+        
+        // Find the height at zero distance
+        let heightAtZero = null;
+        for (let i = 0; i < trajectory.trajectory.length - 1; i++) {
+            const point = trajectory.trajectory[i];
+            const nextPoint = trajectory.trajectory[i + 1];
+            
+            if (point.x <= zeroDistance && nextPoint.x >= zeroDistance) {
+                // Interpolate
+                const ratio = (zeroDistance - point.x) / (nextPoint.x - point.x);
+                heightAtZero = point.y + ratio * (nextPoint.y - point.y);
+                break;
+            }
+        }
+        
+        if (heightAtZero === null && trajectory.trajectory.length > 0) {
+            // Zero distance is beyond trajectory
+            if (trajectory.trajectory[trajectory.trajectory.length - 1].x < zeroDistance) {
+                maxAngle = midAngle;
+                continue;
+            }
+        }
+        
+        if (heightAtZero !== null) {
+            const error = heightAtZero - totalScopeHeight;
+            
+            if (Math.abs(error) < tolerance) {
+                bestAngle = midAngle;
+                break;
+            }
+            
+            if (error > 0) {
+                // Shooting too high
+                maxAngle = midAngle;
+            } else {
+                // Shooting too low
+                minAngle = midAngle;
+            }
+        }
+        
+        iterations++;
+    }
+    
+    // Set the calculated angle
+    document.getElementById('angle').value = bestAngle.toFixed(3);
+}
+
+// Format energy value for display
+function formatEnergy(energy) {
+    if (useFootPounds) {
+        return (energy * JOULES_TO_FTLBF).toFixed(0) + ' ft-lbf';
+    } else {
+        return energy.toFixed(0) + ' J';
+    }
+}
+
+function drawTrajectory(trajectoryData, noDragResult, mass) {
+    const canvas = document.getElementById('trajectoryChart');
+    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value) || 0;
+    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M || 0;
+    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
+    const zeroInHeight = initialHeight + scopeHeight;
+    
+    // Extract data for plotting
+    const distances = trajectoryData.map(point => point.x);
+    const heights = trajectoryData.map(point => point.y);
+    const velocities = trajectoryData.map(point => {
+        const v = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
+        return v;
+    });
+    
+    // Calculate energy and deviation at each point
+    const energies = velocities.map(v => {
+        const energy = 0.5 * mass * v * v;
+        return useFootPounds ? energy * JOULES_TO_FTLBF : energy;
+    });
+    
+    const deviations = trajectoryData.map(point => {
+        // Deviation from zero-in height in mm
+        const deviationM = point.y - zeroInHeight;
+        return deviationM * M_TO_MM;
+    });
+    
+    // If there's an existing chart, destroy it
     if (chartInstance) {
         chartInstance.destroy();
     }
     
-    // Get zero-in parameters for deviation calculation
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M;
-    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const zeroInHeight = initialHeight + scopeHeight;
-    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value) || 0;
+    // Get canvas context
+    const ctx = canvas.getContext('2d');
     
-    // Prepare data for Chart.js
-    const distances = trajectoryData.map(p => p.x);
-    const heights = trajectoryData.map(p => p.y);
-    const velocities = trajectoryData.map(p => Math.sqrt(p.vx * p.vx + p.vy * p.vy));
-    const energies = trajectoryData.map(p => {
-        const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-        return calculator.calculateEnergy(mass, v);
-    });
-    const deviations = trajectoryData.map(p => (p.y - zeroInHeight) * M_TO_MM); // Convert to mm
-    
-    // Convert energy units if needed
-    const displayEnergies = useFootPounds ? energies.map(e => e * JOULES_TO_FTLBF) : energies;
+    // Energy unit for display
     const energyUnit = useFootPounds ? 'ft-lbf' : 'J';
     
-    // Store trajectory data for tooltips
-    currentTrajectoryData = trajectoryData;
-    currentMass = mass;
-    
-    // Prepare annotations
-    const annotations = {};
-    
-    // Add scope height line annotation
-    annotations.scopeHeightLine = {
-        type: 'line',
-        yMin: zeroInHeight,
-        yMax: zeroInHeight,
-        borderColor: '#4444ff',
-        borderWidth: 1,
-        borderDash: [10, 5],
-        label: {
-            content: `スコープハイト: ${zeroInHeight.toFixed(3)}m`,
-            display: true,
-            position: {
-                x: 'start',
-                y: 'start'
-            },
-            backgroundColor: 'rgba(68, 68, 255, 0.8)',
-            color: 'white',
-            font: {
-                size: 10
-            },
-            yAdjust: -20  // 上に20ピクセル移動
-        },
-        yScaleID: 'y' // Height scale
-    };
-    
-    // Add zero-in distance marker if selected
-    if (zeroDistance) {
-        annotations.zeroDistanceLine = {
-            type: 'line',
-            xMin: zeroDistance,
-            xMax: zeroDistance,
-            borderColor: '#00aa00',
-            borderWidth: 2,
-            borderDash: [5, 5],
-            label: {
-                content: `ゼロイン: ${zeroDistance}m`,
-                display: true,
-                position: 'start',
-                backgroundColor: 'rgba(0, 170, 0, 0.8)',
-                color: 'white',
-                font: {
-                    size: 10
-                }
-            },
-            xScaleID: 'x'
-        };
-    }
-    
-    
-    // Chart.js configuration
+    // Create Chart.js configuration
     const config = {
         type: 'line',
         data: {
             labels: distances,
             datasets: [
                 {
-                    label: '軌道',
+                    label: '弾道',
                     data: heights,
                     borderColor: '#ff4444',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(255, 68, 68, 0.1)',
                     borderWidth: 2,
-                    yAxisID: 'y',
                     pointRadius: 0,
-                    pointHoverRadius: 5,
-                    tension: 0
+                    yAxisID: 'y'
                 },
                 {
-                    label: '速度',
+                    label: '速度 (m/s)',
                     data: velocities,
                     borderColor: '#4444ff',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    yAxisID: 'y1',
+                    backgroundColor: 'rgba(68, 68, 255, 0.1)',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
-                    tension: 0
+                    yAxisID: 'y1'
                 },
                 {
-                    label: 'エネルギー',
-                    data: displayEnergies,
+                    label: `エネルギー (${energyUnit})`,
+                    data: energies,
                     borderColor: '#00aa00',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    yAxisID: 'y2',
+                    backgroundColor: 'rgba(0, 170, 0, 0.1)',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
-                    tension: 0
+                    yAxisID: 'y2'
                 },
                 {
-                    label: '偏差',
+                    label: '偏差 (mm)',
                     data: deviations,
                     borderColor: '#ff44ff',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    yAxisID: 'y3',
+                    backgroundColor: 'rgba(255, 68, 255, 0.1)',
+                    borderWidth: 2,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
-                    tension: 0
+                    yAxisID: 'y3'
                 }
             ]
         },
@@ -441,56 +460,35 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
                 intersect: false,
             },
             plugins: {
+                title: {
+                    display: true,
+                    text: '弾道軌道'
+                },
                 legend: {
-                    position: 'top',
-                    align: 'end',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 10,
-                        font: {
-                            size: 11
-                        }
-                    }
+                    display: true,
+                    position: 'top'
                 },
                 tooltip: {
-                    enabled: true,
                     callbacks: {
-                        title: function(context) {
-                            const index = context[0].dataIndex;
+                        afterLabel: function(context) {
+                            const index = context.dataIndex;
                             const point = trajectoryData[index];
-                            return `距離: ${point.x.toFixed(1)}m`;
-                        },
-                        afterTitle: function(context) {
-                            const index = context[0].dataIndex;
-                            const point = trajectoryData[index];
-                            return `時間: ${point.t.toFixed(2)}秒`;
-                        },
-                        label: function(context) {
-                            const datasetLabel = context.dataset.label;
-                            const value = context.parsed.y;
+                            const v = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
+                            const energy = 0.5 * mass * v * v;
+                            const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
+                            const deviation = (point.y - zeroInHeight) * M_TO_MM;
                             
-                            switch(datasetLabel) {
-                                case '軌道':
-                                    return `高度: ${value.toFixed(1)}m`;
-                                case '速度':
-                                    if (useMetersPerSec) {
-                                        return `速度: ${value.toFixed(1)} m/s`;
-                                    } else {
-                                        return `速度: ${(value / FPS_TO_MPS).toFixed(0)} fps`;
-                                    }
-                                case 'エネルギー':
-                                    return `エネルギー: ${value.toFixed(0)} ${energyUnit}`;
-                                case '偏差':
-                                    const sign = value >= 0 ? '+' : '';
-                                    return `偏差: ${sign}${value.toFixed(0)}mm`;
-                                default:
-                                    return '';
-                            }
+                            return [
+                                `時間: ${point.t.toFixed(2)}秒`,
+                                `速度: ${v.toFixed(1)} m/s`,
+                                `エネルギー: ${displayEnergy.toFixed(0)} ${energyUnit}`,
+                                `偏差: ${deviation.toFixed(0)} mm`
+                            ];
                         }
                     }
                 },
                 annotation: {
-                    annotations: annotations
+                    annotations: {}
                 }
             },
             scales: {
@@ -697,199 +695,56 @@ function drawTrajectory(trajectoryData, noDragData, mass) {
 
 function updateDistanceTable(trajectoryData, mass, zeroInHeight) {
     const markerDistances = [50, 100, 150, 200, 300];
-    const tbody = document.querySelector('#distanceTable tbody');
-    tbody.innerHTML = '';
+    const tableBody = document.querySelector('#distanceTable tbody');
+    tableBody.innerHTML = '';
     
     markerDistances.forEach(distance => {
-        // Find the trajectory point closest to this distance
+        // Find the data point closest to this distance
         let closestPoint = null;
         let minDiff = Infinity;
         
-        for (let point of trajectoryData) {
-            const diff = Math.abs(point.x - distance);
-            if (diff < minDiff && point.y >= 0) {
+        for (let i = 0; i < trajectoryData.length; i++) {
+            const diff = Math.abs(trajectoryData[i].x - distance);
+            if (diff < minDiff) {
                 minDiff = diff;
-                closestPoint = point;
+                closestPoint = trajectoryData[i];
             }
         }
         
-        if (closestPoint && closestPoint.x <= Math.max(...trajectoryData.map(p => p.x))) {
+        if (closestPoint && closestPoint.x <= distance * 1.1) { // Allow 10% tolerance
             const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-            const energy = calculator.calculateEnergy(mass, velocity);
+            const energy = 0.5 * mass * velocity * velocity;
+            const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
+            const energyUnit = useFootPounds ? 'ft-lbf' : 'J';
             const deviation = (closestPoint.y - zeroInHeight) * M_TO_MM;
-            
-            // Format velocity
-            let velocityText = '';
-            if (useMetersPerSec) {
-                velocityText = `${velocity.toFixed(1)} m/s`;
-            } else {
-                velocityText = `${(velocity / FPS_TO_MPS).toFixed(0)} fps`;
-            }
-            
-            // Format energy
-            let energyText = '';
-            if (useFootPounds) {
-                energyText = `${(energy * JOULES_TO_FTLBF).toFixed(0)} ft-lbf`;
-            } else {
-                energyText = `${energy.toFixed(0)} J`;
-            }
             
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${distance}m</td>
-                <td>${closestPoint.y.toFixed(1)}m</td>
-                <td>${velocityText}</td>
-                <td>${energyText}</td>
-                <td>${deviation >= 0 ? '+' : ''}${deviation.toFixed(0)}mm</td>
+                <td>${closestPoint.y.toFixed(2)}m</td>
+                <td>${velocity.toFixed(0)} m/s</td>
+                <td>${displayEnergy.toFixed(0)} ${energyUnit}</td>
+                <td>${deviation >= 0 ? '+' : ''}${deviation.toFixed(0)} mm</td>
             `;
-            tbody.appendChild(row);
+            tableBody.appendChild(row);
         }
     });
-}
-
-function calculateZeroAngle() {
-    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
-    if (!zeroDistance) {
-        return; // No zero distance selected
-    }
-    
-    const scopeHeight = parseFloat(document.getElementById('scopeHeight').value) * MM_TO_M; // Convert mm to m
-    const initialHeight = parseFloat(document.getElementById('initialHeight').value);
-    const targetHeight = initialHeight + scopeHeight; // Target height = barrel height + scope height
-    
-    // Get current parameters
-    const params = getInputValues();
-    
-    // Use binary search to find the angle that gives us the zero distance
-    let lowAngle = 0;      // Start from 0 degrees
-    let highAngle = 0.01;  // Start with 0.01 degrees for first zero
-    let bestAngle = 0;
-    let bestDistanceDiff = Infinity;  // Track best distance difference
-    let iterations = 0;
-    const maxIterations = 100;  // More iterations for better precision
-    const tolerance = 0.5; // 0.5m tolerance for distance
-    
-    while (iterations < maxIterations && (highAngle - lowAngle) > 0.0001) {  // Better precision
-        const midAngle = (lowAngle + highAngle) / 2;
-        
-        // Calculate trajectory with this angle
-        const testParams = {...params, angle: midAngle};
-        const trajectory = calculator.calculateTrajectory(testParams);
-        
-        // Check if trajectory is valid
-        if (!trajectory || !trajectory.trajectory) {
-            continue;
-        }
-        
-        const trajectoryPoints = trajectory.trajectory;
-        
-        // Find first crossing point with scope height (first zero)
-        let firstZeroDistance = null;
-        let crossingHeight = null;
-        
-        // First, find where trajectory crosses scope height line
-        for (let i = 1; i < trajectoryPoints.length; i++) {
-            const prevHeight = trajectoryPoints[i-1].y;
-            const currHeight = trajectoryPoints[i].y;
-            
-            // Check if trajectory crosses the target height between these two points
-            if ((prevHeight <= targetHeight && currHeight >= targetHeight) || 
-                (prevHeight >= targetHeight && currHeight <= targetHeight)) {
-                // Interpolate to find exact crossing distance
-                const ratio = (targetHeight - prevHeight) / (currHeight - prevHeight);
-                firstZeroDistance = trajectoryPoints[i-1].x + ratio * (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
-                
-                // Only consider this if it's ascending (first zero)
-                if (trajectoryPoints[i].vy > 0 || (trajectoryPoints[i].vy === 0 && trajectoryPoints[i-1].vy > 0)) {
-                    break;
-                }
-            }
-        }
-        
-        // Now check the height at the target distance
-        for (let i = 1; i < trajectoryPoints.length; i++) {
-            if (trajectoryPoints[i].x >= zeroDistance) {
-                const ratio = (zeroDistance - trajectoryPoints[i-1].x) / (trajectoryPoints[i].x - trajectoryPoints[i-1].x);
-                crossingHeight = trajectoryPoints[i-1].y + ratio * (trajectoryPoints[i].y - trajectoryPoints[i-1].y);
-                break;
-            }
-        }
-        
-        // If we have the height at target distance, use it for binary search
-        if (crossingHeight !== null) {
-            const heightDiff = crossingHeight - targetHeight;
-            
-            // Keep track of best angle
-            if (Math.abs(heightDiff) < Math.abs(bestDistanceDiff)) {
-                bestAngle = midAngle;
-                bestDistanceDiff = heightDiff;
-            }
-            
-            if (Math.abs(heightDiff) < 0.001) { // 1mm tolerance
-                break;
-            } else if (heightDiff < 0) {
-                // Shooting too low, increase angle
-                lowAngle = midAngle;
-                
-                // If we're at the high end and still too low, expand the range
-                if (midAngle > highAngle * 0.9 && iterations < 20) {
-                    highAngle *= 2;
-                }
-            } else {
-                // Shooting too high, decrease angle
-                highAngle = midAngle;
-            }
-        } else {
-            // Trajectory doesn't reach target distance
-            lowAngle = midAngle;
-        }
-        
-        iterations++;
-    }
-    
-    // Set the calculated angle
-    document.getElementById('angle').value = bestAngle.toFixed(3);
 }
 
 function downloadCSV() {
     if (!currentTrajectoryData || !currentMass) return;
     
-    let csvContent = "距離(m),高度(m),速度(m/s),速度(fps),エネルギー(J)\n";
+    let csv = 'Time (s),Distance (m),Height (m),Velocity X (m/s),Velocity Y (m/s),Total Velocity (m/s),Energy (J),Energy (ft-lbf)\n';
     
-    // Process trajectory data at 5m intervals
-    let processedDistances = new Set();
-    let dataPoints = [];
-    
-    for (let point of currentTrajectoryData) {
-        const distance = Math.floor(point.x / 5) * 5; // Round down to nearest 5m
+    currentTrajectoryData.forEach(point => {
+        const totalVelocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
+        const energy = 0.5 * currentMass * totalVelocity * totalVelocity;
+        const energyFtLbf = energy * JOULES_TO_FTLBF;
         
-        if (!processedDistances.has(distance) && point.y >= 0) {
-            processedDistances.add(distance);
-            
-            const velocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
-            const velocityFps = velocity / FPS_TO_MPS;
-            const energy = calculator.calculateEnergy(currentMass, velocity);
-            
-            dataPoints.push({
-                distance: distance,
-                altitude: point.y,
-                velocityMs: velocity,
-                velocityFps: velocityFps,
-                energy: energy
-            });
-        }
-    }
+        csv += `${point.t.toFixed(3)},${point.x.toFixed(2)},${point.y.toFixed(3)},${point.vx.toFixed(2)},${point.vy.toFixed(2)},${totalVelocity.toFixed(2)},${energy.toFixed(1)},${energyFtLbf.toFixed(1)}\n`;
+    });
     
-    // Sort by distance
-    dataPoints.sort((a, b) => a.distance - b.distance);
-    
-    // Generate CSV
-    for (let data of dataPoints) {
-        csvContent += `${data.distance},${data.altitude.toFixed(2)},${data.velocityMs.toFixed(2)},${data.velocityFps.toFixed(0)},${data.energy.toFixed(2)}\n`;
-    }
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     
