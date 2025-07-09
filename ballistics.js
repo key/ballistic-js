@@ -4,6 +4,11 @@ class BallisticsCalculator {
         this.timeStep = 0.001; // time step for simulation (s) - 1ms for better precision
         this.maxSimTime = 1000; // Maximum simulation time (s)
         this.piHalf = Math.PI / 2; // Pre-calculated constant
+        
+        // Ballistic constants
+        this.BC_CONSTANT = 7503; // Standard constant for BC calculations
+        this.FPS_TO_MPS = 0.3048; // Feet per second to meters per second
+        this.STANDARD_AIR_DENSITY = 1.225; // Standard air density at sea level (kg/m³)
         // Use DragFunctionCalculator from global scope in browser or require in Node.js
         this.dragCalculator = typeof window !== 'undefined' 
             ? new window.DragFunctionCalculator() 
@@ -61,15 +66,14 @@ class BallisticsCalculator {
             
             // BC system: deceleration = 41.43 × (dragFunction / BC) × (ρ/ρ₀) × v²
             // Standard BC formula uses velocity in fps and returns deceleration in ft/s²
-            const vFps = vRel / 0.3048; // Convert m/s to fps
-            const rhoRatio = airDensity / 1.225; // Air density ratio (1.225 kg/m³ is standard)
+            const vFps = vRel / this.FPS_TO_MPS; // Convert m/s to fps
+            const rhoRatio = airDensity / this.STANDARD_AIR_DENSITY; // Air density ratio
             
             // Calculate deceleration in ft/s² using standard BC formula
-            // Standard formula: a = (ρ/ρ₀) × (i/BC) × (v²/7503)
-            // where 7503 is the standard constant for BC calculations
-            const dragDecelFps2 = (dragFunction / bc) * rhoRatio * (vFps * vFps) / 7503;
+            // Standard formula: a = (ρ/ρ₀) × (i/BC) × (v²/BC_CONSTANT)
+            const dragDecelFps2 = (dragFunction / bc) * rhoRatio * (vFps * vFps) / this.BC_CONSTANT;
             // Convert to m/s²
-            const dragDecel = dragDecelFps2 * 0.3048;
+            const dragDecel = dragDecelFps2 * this.FPS_TO_MPS;
             const dragAx = -dragDecel * (vRelX / vRel);
             const dragAy = -dragDecel * (vRelY / vRel);
 

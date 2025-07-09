@@ -12,6 +12,10 @@ const JOULES_TO_FTLBF = 0.737562;
 const MM_TO_M = 0.001;
 const M_TO_MM = 1000;
 
+// Ballistic calculation constants
+const BC_CONSTANT = 7503;  // Standard constant for BC calculations
+const STANDARD_AIR_DENSITY = 1.225;  // Standard air density at sea level (kg/m³)
+
 // Environmental calculation constants
 const ALTITUDE_TEMP_GRADIENT = 0.0065;  // Temperature gradient K/m
 const SEA_LEVEL_TEMP = 288.15;  // Sea level standard temperature K
@@ -265,7 +269,7 @@ function displayResults(withDrag, noDrag, energy, momentum) {
     }
     
     // Calculate impact energy
-    const impactEnergy = 0.5 * currentMass * withDrag.impactVelocity * withDrag.impactVelocity;
+    const impactEnergy = calculator.calculateEnergy(currentMass, withDrag.impactVelocity);
     let displayImpactEnergy = impactEnergy;
     if (useFootPounds) {
         displayImpactEnergy = impactEnergy * JOULES_TO_FTLBF;
@@ -395,7 +399,7 @@ function drawTrajectory(trajectoryData, noDragResult, mass) {
     
     // Calculate energy and deviation at each point
     const energies = velocities.map(v => {
-        const energy = 0.5 * mass * v * v;
+        const energy = calculator.calculateEnergy(mass, v);
         return useFootPounds ? energy * JOULES_TO_FTLBF : energy;
     });
     
@@ -763,7 +767,7 @@ function updateDistanceTable(trajectoryData, mass, zeroInHeight) {
         
         if (closestPoint && (distance === 0 || closestPoint.x <= distance * 1.1)) { // Allow 10% tolerance except for 0
             const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
-            const energy = 0.5 * mass * velocity * velocity;
+            const energy = calculator.calculateEnergy(mass, velocity);
             const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
             const energyUnit = useFootPounds ? 'ft-lbf' : 'J';
             const deviation = (closestPoint.y - zeroInHeight) * M_TO_MM;
@@ -788,7 +792,7 @@ function downloadCSV() {
     
     currentTrajectoryData.forEach(point => {
         const totalVelocity = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
-        const energy = 0.5 * currentMass * totalVelocity * totalVelocity;
+        const energy = calculator.calculateEnergy(currentMass, totalVelocity);
         const energyFtLbf = energy * JOULES_TO_FTLBF;
         
         csv += `${point.t.toFixed(3)},${point.x.toFixed(2)},${point.y.toFixed(3)},${point.vx.toFixed(2)},${point.vy.toFixed(2)},${totalVelocity.toFixed(2)},${energy.toFixed(1)},${energyFtLbf.toFixed(1)}\n`;
