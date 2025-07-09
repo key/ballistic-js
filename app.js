@@ -603,15 +603,68 @@ function drawTrajectory(trajectoryData, noDragResult, mass) {
     // Update distance table
     updateDistanceTable(trajectoryData, mass, zeroInHeight);
     
+    // Add zero-in distance annotation if specified
+    if (zeroDistance > 0) {
+        // Add vertical line for zero-in distance
+        chartInstance.options.plugins.annotation.annotations.zeroLine = {
+            type: 'line',
+            xMin: zeroDistance,
+            xMax: zeroDistance,
+            borderColor: '#00aa00',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            xScaleID: 'x'
+        };
+        
+        // Add label for zero-in distance
+        chartInstance.options.plugins.annotation.annotations.zeroLabel = {
+            type: 'label',
+            xValue: zeroDistance,
+            yValue: zeroInHeight,
+            content: [`ゼロイン`, `${zeroDistance}m`],
+            backgroundColor: 'rgba(0, 170, 0, 0.9)',
+            borderColor: '#00aa00',
+            borderWidth: 2,
+            color: 'white',
+            font: {
+                size: 11,
+                weight: 'bold'
+            },
+            padding: {
+                top: 4,
+                bottom: 4,
+                left: 8,
+                right: 8
+            },
+            borderRadius: 4,
+            yScaleID: 'y',
+            xScaleID: 'x'
+        };
+        
+        // Add horizontal line for zero-in height
+        chartInstance.options.plugins.annotation.annotations.zeroHeightLine = {
+            type: 'line',
+            yMin: zeroInHeight,
+            yMax: zeroInHeight,
+            borderColor: '#00aa00',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            yScaleID: 'y'
+        };
+    }
+    
     // Find subsonic threshold (where velocity drops below sound speed)
     const soundSpeed = calculateSoundSpeed(parseFloat(document.getElementById('temperature').value));
     let subsonicDistance = null;
     
-    for (let i = 1; i < trajectoryData.length; i++) {
-        const velocity = Math.sqrt(trajectoryData[i].vx * trajectoryData[i].vx + trajectoryData[i].vy * trajectoryData[i].vy);
-        if (velocity < soundSpeed && trajectoryData[i-1]) {
-            const prevVelocity = Math.sqrt(trajectoryData[i-1].vx * trajectoryData[i-1].vx + trajectoryData[i-1].vy * trajectoryData[i-1].vy);
-            if (prevVelocity >= soundSpeed) {
+    // Check if initial velocity is supersonic
+    const initialVelocity = Math.sqrt(trajectoryData[0].vx * trajectoryData[0].vx + trajectoryData[0].vy * trajectoryData[0].vy);
+    
+    if (initialVelocity > soundSpeed) {
+        for (let i = 1; i < trajectoryData.length; i++) {
+            const velocity = Math.sqrt(trajectoryData[i].vx * trajectoryData[i].vx + trajectoryData[i].vy * trajectoryData[i].vy);
+            if (velocity < soundSpeed) {
+                const prevVelocity = Math.sqrt(trajectoryData[i-1].vx * trajectoryData[i-1].vx + trajectoryData[i-1].vy * trajectoryData[i-1].vy);
                 // Interpolate to find exact crossing point
                 const ratio = (soundSpeed - prevVelocity) / (velocity - prevVelocity);
                 subsonicDistance = trajectoryData[i-1].x + ratio * (trajectoryData[i].x - trajectoryData[i-1].x);
@@ -670,29 +723,37 @@ function drawTrajectory(trajectoryData, noDragResult, mass) {
             yScaleID: 'y1',  // Velocity scale
             xScaleID: 'x'
         };
-        chartInstance.update();
     }
+    
+    // Update the chart with all annotations
+    chartInstance.update();
 }
 
 function updateDistanceTable(trajectoryData, mass, zeroInHeight) {
-    const markerDistances = [50, 100, 150, 200, 300];
+    const markerDistances = [0, 50, 100, 150, 200, 300];
     const tableBody = document.querySelector('#distanceTable tbody');
     tableBody.innerHTML = '';
     
     markerDistances.forEach(distance => {
-        // Find the data point closest to this distance
         let closestPoint = null;
-        let minDiff = Infinity;
         
-        for (let i = 0; i < trajectoryData.length; i++) {
-            const diff = Math.abs(trajectoryData[i].x - distance);
-            if (diff < minDiff) {
-                minDiff = diff;
-                closestPoint = trajectoryData[i];
+        if (distance === 0) {
+            // For 0 distance, use the first data point
+            closestPoint = trajectoryData[0];
+        } else {
+            // Find the data point closest to this distance
+            let minDiff = Infinity;
+            
+            for (let i = 0; i < trajectoryData.length; i++) {
+                const diff = Math.abs(trajectoryData[i].x - distance);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestPoint = trajectoryData[i];
+                }
             }
         }
         
-        if (closestPoint && closestPoint.x <= distance * 1.1) { // Allow 10% tolerance
+        if (closestPoint && (distance === 0 || closestPoint.x <= distance * 1.1)) { // Allow 10% tolerance except for 0
             const velocity = Math.sqrt(closestPoint.vx * closestPoint.vx + closestPoint.vy * closestPoint.vy);
             const energy = 0.5 * mass * velocity * velocity;
             const displayEnergy = useFootPounds ? energy * JOULES_TO_FTLBF : energy;
