@@ -283,13 +283,6 @@ function displayResults(withDrag, noDrag, energy, momentum) {
                 <div class="result-label">運動量 (kg·m/s)</div>
             </div>
         </div>
-        
-        <div style="margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 6px;">
-            <h4 style="margin-top: 0;">空気抵抗なしの理論値との比較</h4>
-            <p>最大飛距離: ${noDrag.maxRange.toFixed(1)} m (差: ${(withDrag.maxRange - noDrag.maxRange).toFixed(1)} m)</p>
-            <p>最大高度: ${noDrag.maxHeight.toFixed(1)} m (差: ${(withDrag.maxHeight - noDrag.maxHeight).toFixed(1)} m)</p>
-            <p>飛行時間: ${noDrag.flightTime.toFixed(2)} 秒 (差: ${(withDrag.flightTime - noDrag.flightTime).toFixed(2)} 秒)</p>
-        </div>
     `;
 }
 
