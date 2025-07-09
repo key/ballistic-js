@@ -27,6 +27,11 @@ const CELSIUS_TO_KELVIN = 273.15;
 const SOUND_SPEED_BASE = 331.5;  // Base sound speed at 0°C (m/s)
 const SOUND_SPEED_TEMP_COEFF = 0.6;  // Temperature coefficient for sound speed
 
+// Magnus formula constants for saturated vapor pressure
+const MAGNUS_A = 6.1078;  // Base vapor pressure (hPa)
+const MAGNUS_B = 7.5;  // Temperature coefficient
+const MAGNUS_C = 237.3;  // Temperature offset (°C)
+
 // Cookie constants
 const COOKIE_EXPIRY_DAYS = 365;
 
@@ -868,7 +873,7 @@ function calculateAirDensity() {
     const currentTemperature = temperature;
     
     // 飽和水蒸気圧の計算 (Magnus formula)
-    const Es = 6.1078 * Math.pow(10, (7.5 * currentTemperature) / (currentTemperature + 237.3));
+    const Es = MAGNUS_A * Math.pow(10, (MAGNUS_B * currentTemperature) / (currentTemperature + MAGNUS_C));
     
     // 実際の水蒸気圧
     const E = (humidity / 100) * Es;
