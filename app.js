@@ -227,8 +227,8 @@ function calculate() {
     // Check if zero-in distance is selected and calculate angle if needed
     const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
     if (zeroDistance) {
-        calculateZeroAngle();
-        // Get parameters after angle calculation
+        const calculatedAngle = calculateZeroAngle(zeroDistance);
+        document.getElementById('angle').value = calculatedAngle.toFixed(3);
     }
     
     const params = getInputValues();
@@ -305,9 +305,8 @@ function displayResults(withDrag, noDrag, energy, momentum) {
     `;
 }
 
-function calculateZeroAngle() {
-    const zeroDistance = parseFloat(document.getElementById('zeroDistance').value);
-    if (!zeroDistance) return;
+function calculateZeroAngle(targetDistance) {
+    if (!targetDistance) return 0;
     
     const params = getInputValues();
     const scopeHeight = params.scopeHeight;
@@ -333,9 +332,9 @@ function calculateZeroAngle() {
             const point = trajectory.trajectory[i];
             const nextPoint = trajectory.trajectory[i + 1];
             
-            if (point.x <= zeroDistance && nextPoint.x >= zeroDistance) {
+            if (point.x <= targetDistance && nextPoint.x >= targetDistance) {
                 // Interpolate
-                const ratio = (zeroDistance - point.x) / (nextPoint.x - point.x);
+                const ratio = (targetDistance - point.x) / (nextPoint.x - point.x);
                 heightAtZero = point.y + ratio * (nextPoint.y - point.y);
                 break;
             }
@@ -343,7 +342,7 @@ function calculateZeroAngle() {
         
         if (heightAtZero === null && trajectory.trajectory.length > 0) {
             // Zero distance is beyond trajectory
-            if (trajectory.trajectory[trajectory.trajectory.length - 1].x < zeroDistance) {
+            if (trajectory.trajectory[trajectory.trajectory.length - 1].x < targetDistance) {
                 maxAngle = midAngle;
                 continue;
             }
@@ -369,8 +368,7 @@ function calculateZeroAngle() {
         iterations++;
     }
     
-    // Set the calculated angle
-    document.getElementById('angle').value = bestAngle.toFixed(3);
+    return bestAngle;
 }
 
 // Format energy value for display
