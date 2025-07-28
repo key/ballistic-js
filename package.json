@@ -23,7 +23,7 @@
     "@anthropic-ai/claude-code": "^1.0.43",
     "@babel/core": "^7.28.0",
     "@babel/preset-env": "^7.28.0",
-    "babel-jest": "^30.0.4",
+    "babel-jest": "^30.0.5",
     "jest": "^30.0.4",
     "markdownlint-cli2": "^0.18.1"
   }
