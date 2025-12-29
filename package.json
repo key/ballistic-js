@@ -20,7 +20,7 @@
   "author": "ballistic-js contributors",
   "license": "MIT",
   "devDependencies": {
-    "@anthropic-ai/claude-code": "^1.0.43",
+    "@anthropic-ai/claude-code": "^2.0.76",
     "@babel/core": "^7.28.0",
     "@babel/preset-env": "^7.28.0",
     "babel-jest": "^30.0.4",
