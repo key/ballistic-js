@@ -21,7 +21,7 @@
   "license": "MIT",
   "devDependencies": {
     "@anthropic-ai/claude-code": "^2.1.12",
-    "@babel/core": "^7.28.0",
+    "@babel/core": "^7.28.6",
     "@babel/preset-env": "^7.28.6",
     "babel-jest": "^30.0.4",
     "jest": "^30.0.4",
